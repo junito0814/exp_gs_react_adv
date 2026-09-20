@@ -24,9 +24,17 @@ export default function Recorder({ onText }: { onText: (t: string) => void }) {
             const blob = new Blob(chunksRef.current, { type: "audio/webm" });
             const form = new FormData();
             form.append("audio", blob, "audio.webm");
-            const res = await fetch("/api/transcribe", { method: "POST", body: form });
-            const data = await res.json();
-            onText(data.text); // 文字起こし結果を親に渡す
+            try {
+                const res = await fetch("/api/transcribe", { method: "POST", body: form });
+                const data = await res.json();
+                if (!res.ok || typeof data.text !== "string") {
+                    alert("文字起こしに失敗しました。もう一度お試しください。");
+                    return;
+                }
+                onText(data.text); // 文字起こし結果を親に渡す
+            } catch {
+                alert("文字起こしに失敗しました。通信を確認してください。");
+            }
         };
         recorder.start();
         recorderRef.current = recorder;

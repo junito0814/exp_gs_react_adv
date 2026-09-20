@@ -1,6 +1,14 @@
-// src/app/api/coach/route.ts
+// app/api/coach/route.ts — 講評モードのフィードバック生成
+import { requireUserId, unauthorized } from "@/lib/auth";
+import { parseConditions } from "@/lib/conditions";
+import { TOPIC_MAX } from "@/lib/options";
+import { buildSystemPrompt, buildCoachPrompt } from "@/lib/prompts";
+
 export async function POST(request: Request) {
-    // ① 入力を受け取る（画面から送られてくる お題 と 回答）
+    const userId = await requireUserId();
+    if (!userId) return unauthorized();
+
+    // ① 入力を受け取る（テーマ・回答・面接条件）
     //   Body が空/JSONでない時に備えて、try で受け止める
     let body;
     try {
@@ -8,35 +16,20 @@ export async function POST(request: Request) {
     } catch {
         return Response.json({ feedback: "リクエストの形式が不正です（BrunoのBodyがJSONか確認してください）" }, { status: 400 });
     }
-    const { topic, answer, tone } = body;
+    const topic = typeof body.topic === "string" ? body.topic.trim().slice(0, TOPIC_MAX) : "";
+    const answer = typeof body.answer === "string" ? body.answer.trim() : "";
+    if (!topic || !answer) {
+        return Response.json({ feedback: "テーマと回答を入力してください" }, { status: 400 });
+    }
+    // 面接条件はクライアントの値を信用せず再検証する（不正値は初期値に丸まる）
+    const conditions = parseConditions(body.conditions ?? {});
 
-    // ② AIへの"お願い文"を組み立てる
-    const prompt = `あなたは就職活動・面接の練習コーチです。
-                    「${tone}」な口調で、以下の回答にフィードバックを行ってください。
-
-                    「お題」${topic}
-                    「回答」${answer}
-
-                    必ず以下の項目ごとに改行（空行）を挟んで、段落を明確に分けて出力してください。
-
-                    あなたの回答
-                    ${answer}
-
-                    ■ 良かった点
-                    ・（良かった点を1〜2点）
-
-                    ■ 改善点とアドバイス
-                    ・（改善点を1〜2点）
-                    → 言い換え例：「（具体的な言い換え表現）」
-
-                    ■ 面接官からの深掘り質問
-                    ・（想定質問1）
-                    ・（想定質問2）
-
-                    【指示】
-                    1. 上記のフォーマットをそのまま使用し、各セクションの間に必ず空行を入れてください。
-                    2. 全体で250〜350文字程度に収めてください。
-                    3. 全体を通して「${tone}」の口調を徹底してください。`;
+    // ② AIへの"お願い文"を組み立てる（口調・禁止事項は system、フォーマットは user）
+    //    プロフィール（ES・職務経歴書）は第 2 段階で system に追加する
+    const messages = [
+        { role: "system", content: buildSystemPrompt(conditions) },
+        { role: "user", content: buildCoachPrompt(topic, answer) },
+    ];
 
     // ③ Groq を叩く（キーはサーバー側の環境変数から。ブラウザには出ない）
     const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
@@ -47,7 +40,7 @@ export async function POST(request: Request) {
         },
         body: JSON.stringify({
             model: "openai/gpt-oss-120b",
-            messages: [{ role: "user", content: prompt }],
+            messages,
         }),
     });
 

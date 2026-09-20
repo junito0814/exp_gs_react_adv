@@ -3,14 +3,21 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "NODE_OPTIONS=--no-network-family-autoselection next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:generate": "drizzle-kit generate",
+    "db:push": "NODE_OPTIONS=--no-network-family-autoselection drizzle-kit push"
   },
   "dependencies": {
     "@andresaya/edge-tts": "^1.8.0",
+    "@clerk/localizations": "^4.17.1",
+    "@clerk/nextjs": "^7.9.4",
+    "@neondatabase/serverless": "^1.1.0",
     "@vladmandic/face-api": "^1.7.15",
+    "dotenv": "^17.4.2",
+    "drizzle-orm": "^0.45.2",
     "next": "16.3.1",
     "react": "19.2.8",
     "react-dom": "19.2.8"
@@ -20,6 +27,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "drizzle-kit": "^0.31.10",
     "eslint": "^9",
     "eslint-config-next": "16.3.1",
     "tailwindcss": "^4",
