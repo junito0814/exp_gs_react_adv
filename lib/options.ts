@@ -56,6 +56,8 @@ export const BACKGROUND_PLACEHOLDER: Record<CareerKey, string> = {
     mid: "例：総合商社 営業企画 10 年",
 };
 
+export const INTERVIEW_TURNS = 3;  // 模擬面接の往復数（画面表示とプロンプトで共有）
+
 export const BACKGROUND_MAX = 100; // 現職／学部の最大文字数
 export const TOPIC_MAX = 100;      // 自由入力テーマの最大文字数
 

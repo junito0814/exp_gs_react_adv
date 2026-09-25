@@ -1,6 +1,6 @@
 // lib/prompts.ts
 // AI に渡すプロンプト。講評（/api/coach）と模擬面接（/api/interview）で共通の system プロンプトをここで組み立てる。
-import { INDUSTRIES, JOBS, CAREERS, LEVELS, BACKGROUND_LABEL, labelOf, type LevelKey, type CareerKey } from "./options";
+import { INDUSTRIES, JOBS, CAREERS, LEVELS, BACKGROUND_LABEL, INTERVIEW_TURNS, labelOf, type LevelKey, type CareerKey } from "./options";
 import type { Conditions } from "./conditions";
 
 // 面接官レベルごとの振る舞い（要件定義 5.1）
@@ -92,7 +92,6 @@ ${answer}
 // 模擬面接（/api/interview, /api/interview/summary）
 // ============================================================
 
-export const INTERVIEW_TURNS = 3;          // 1 回の面接の往復数
 export const QUESTION_MAX_CHARS = 100;     // 質問の文字数上限（プロンプトで指示）
 const ANSWER_SECONDS_GUIDE = "45〜90 秒";  // 回答の長さの目安
 const ANSWER_CHARS_GUIDE = "200〜400 文字";

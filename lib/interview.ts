@@ -1,5 +1,5 @@
 // lib/interview.ts — 模擬面接の往復データの検証
-import { INTERVIEW_TURNS } from "./prompts";
+import { INTERVIEW_TURNS } from "./options";
 import { TOPICS_BY_CAREER, type CareerKey } from "./options";
 import type { Turn } from "./types";
 
