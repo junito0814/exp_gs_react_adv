@@ -30,7 +30,7 @@ export default async function Home() {
             <ConditionForm />
 
             <div className="flex gap-8 justify-center mt-10 text-lg">
-                <Link href="/history" className="text-red-400 hover:underline">📋 履歴を見る</Link>
+                <Link href="/history?mode=interview" className="text-red-400 hover:underline">📋 履歴を見る</Link>
                 <Link href="/profile" className="text-red-400 hover:underline">⚙ プロフィール設定</Link>
             </div>
         </main>

@@ -4,9 +4,9 @@ import { parseConditions } from "@/lib/conditions";
 import { formatProfileForPrompt } from "@/lib/profile";
 import { getProfile } from "@/lib/profile-db";
 import {
-    buildInterviewerSystemPrompt, buildFirstQuestionPrompt, FOLLOW_UP_PROMPT,
-    parseQuestion, INTERVIEW_TURNS,
+    buildInterviewerSystemPrompt, buildFirstQuestionPrompt, FOLLOW_UP_PROMPT, parseQuestion,
 } from "@/lib/prompts";
+import { INTERVIEW_TURNS } from "@/lib/options";
 import { validateTurns, pickTopic } from "@/lib/interview";
 import { chat } from "@/lib/groq";
 

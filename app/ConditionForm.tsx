@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import {
     INDUSTRIES, JOBS, CAREERS, LEVELS,
     BACKGROUND_LABEL, BACKGROUND_PLACEHOLDER, BACKGROUND_MAX,
+    INTERVIEW_TURNS,
 } from "@/lib/options";
 import { DEFAULT_CONDITIONS, toQuery, type Conditions } from "@/lib/conditions";
 
@@ -72,19 +73,30 @@ export default function ConditionForm({ initial }: { initial?: Conditions }) {
                 </label>
             </div>
 
-            <div className="flex flex-wrap gap-4 justify-center mt-8">
-                <button
-                    type="button"
-                    onClick={() => router.push(`/interview?${toQuery(c)}`)}
-                    className="bg-red-400 text-white px-6 py-3 rounded hover:bg-red-500 transition duration-300 transform hover:scale-105 cursor-pointer">
-                    🎤 模擬面接を始める
-                </button>
-                <button
-                    type="button"
-                    onClick={() => router.push(`/practice?${toQuery(c)}`)}
-                    className="px-6 py-3 rounded border border-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition duration-300 cursor-pointer">
-                    ✎ 講評モードで練習
-                </button>
+            {/* 2 つのモード。違いが分かるよう一言添える */}
+            <div className="flex flex-wrap gap-6 justify-center mt-8">
+                <div className="flex flex-col items-center gap-2">
+                    <button
+                        type="button"
+                        onClick={() => router.push(`/interview?${toQuery(c)}`)}
+                        className="bg-red-400 text-white px-6 py-3 rounded hover:bg-red-500 transition duration-300 transform hover:scale-105 cursor-pointer">
+                        🎤 模擬面接を始める
+                    </button>
+                    <span className="text-xs text-gray-500 dark:text-gray-400 text-center max-w-[15rem]">
+                        面接官が出題し、回答を深掘りします（{INTERVIEW_TURNS} 往復・録音のみ）
+                    </span>
+                </div>
+                <div className="flex flex-col items-center gap-2">
+                    <button
+                        type="button"
+                        onClick={() => router.push(`/practice?${toQuery(c)}`)}
+                        className="px-6 py-3 rounded border border-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition duration-300 cursor-pointer">
+                        ✎ 講評モードで練習
+                    </button>
+                    <span className="text-xs text-gray-500 dark:text-gray-400 text-center max-w-[15rem]">
+                        テーマを自分で選んで 1 問だけ講評をもらいます
+                    </span>
+                </div>
             </div>
         </div>
     );
