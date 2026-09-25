@@ -1,5 +1,6 @@
 // db/schema.ts
-import { pgTable, serial, text, integer, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, timestamp, jsonb } from "drizzle-orm/pg-core";
+import type { Turn, HistoryRow } from "@/lib/types";
 
 export const sessions = pgTable("sessions", {
     id: serial("id").primaryKey(),              // 通し番号（主キー・自動）
@@ -13,8 +14,18 @@ export const sessions = pgTable("sessions", {
     level: text("level").notNull(),             // 面接官レベル "kind" / "strict" / "harsh"
     topic: text("topic").notNull(),             // お題（講評）/ 最初の質問（模擬面接）
     answerText: text("answer_text"),            // 回答（講評モード）
-    smileScore: integer("smile_score"),         // 笑顔スコア（送信時点）
+    smileScore: integer("smile_score"),         // 笑顔スコア（送信時点。模擬面接は最終往復）
     feedback: text("feedback"),                 // AI のフィードバック / 総評
+    turns: jsonb("turns").$type<Turn[]>(),      // 模擬面接の往復（質問・回答・笑顔・秒数）
     createdAt: timestamp("created_at").defaultNow().notNull(), // 作成日時
     memo: text("memo"),                         // メモ（講評モード）
+});
+
+// プロフィール（ES・職務経歴書・免許資格）。ユーザーごとに 1 行
+export const profiles = pgTable("profiles", {
+    userId: text("user_id").primaryKey(),                       // Clerk の userId
+    es: text("es").notNull().default(""),                       // ES（自由入力）
+    history: jsonb("history").$type<HistoryRow[]>().notNull().default([]), // 職務経歴書（履歴書形式）
+    qualifications: text("qualifications").notNull().default(""),// 免許・資格
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),   // 更新日時
 });
