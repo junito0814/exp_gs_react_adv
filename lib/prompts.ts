@@ -109,12 +109,13 @@ export function buildInterviewerSystemPrompt(c: Conditions, profileText?: string
     ].join("\n\n");
 }
 
-// 最初の質問を求める user メッセージ
-export function buildFirstQuestionPrompt(c: Conditions): string {
-    return `この面接で深掘りするテーマを 1 つ選び、最初の質問をしてください。
-テーマは ${c.career === "new" ? "新卒" : "中途"} の面接でよく問われるもののなかから、志望業界・志望職種に合うものを選んでください。
-毎回同じテーマにならないよう、選ぶテーマに幅を持たせてください。
-これから ${INTERVIEW_TURNS} 往復の面接を行うため、1 問目は答えやすい入口となる質問にしてください。`;
+// 最初の質問を求める user メッセージ。
+// テーマは AI に選ばせると偏るため、サーバー側（pickTopic）で決めて渡す
+export function buildFirstQuestionPrompt(c: Conditions, topic: string): string {
+    return `この面接のテーマは「${topic}」です。このテーマについて最初の質問をしてください。
+- 志望業界（${labelOf(INDUSTRIES, c.industry)}）・志望職種（${labelOf(JOBS, c.job)}）${c.background ? `・${BACKGROUND_LABEL[c.career]}（${c.background}）` : ""}に合わせた聞き方にしてください。
+- これから ${INTERVIEW_TURNS} 往復の面接を行うため、1 問目は答えやすい入口となる質問にしてください。
+- 質問文に「テーマ」という言葉は使わないでください。`;
 }
 
 // 深掘りを求める user メッセージ（直前の回答のあとに付ける）
