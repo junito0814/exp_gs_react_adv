@@ -3,6 +3,7 @@ import { requireUserId, unauthorized } from "@/lib/auth";
 import { parseConditions } from "@/lib/conditions";
 import { TOPIC_MAX } from "@/lib/options";
 import { buildSystemPrompt, buildCoachPrompt } from "@/lib/prompts";
+import { getProfile, formatProfileForPrompt } from "@/lib/profile";
 
 export async function POST(request: Request) {
     const userId = await requireUserId();
@@ -25,9 +26,10 @@ export async function POST(request: Request) {
     const conditions = parseConditions(body.conditions ?? {});
 
     // ② AIへの"お願い文"を組み立てる（口調・禁止事項は system、フォーマットは user）
-    //    プロフィール（ES・職務経歴書）は第 2 段階で system に追加する
+    //    プロフィール（ES・職務経歴書）はサーバー側で読む。ブラウザからは送らせない
+    const profileText = formatProfileForPrompt(await getProfile(userId));
     const messages = [
-        { role: "system", content: buildSystemPrompt(conditions) },
+        { role: "system", content: buildSystemPrompt(conditions, profileText) },
         { role: "user", content: buildCoachPrompt(topic, answer) },
     ];
 
