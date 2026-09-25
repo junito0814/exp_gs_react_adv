@@ -4,7 +4,7 @@ import { parseConditions } from "@/lib/conditions";
 import { formatProfileForPrompt } from "@/lib/profile";
 import { getProfile } from "@/lib/profile-db";
 import {
-    buildInterviewerSystemPrompt, buildFirstQuestionPrompt, FOLLOW_UP_PROMPT, parseQuestion,
+    buildInterviewerSystemPrompt, buildFirstQuestionPrompt, buildFollowUpPrompt, parseQuestion,
 } from "@/lib/prompts";
 import { INTERVIEW_TURNS } from "@/lib/options";
 import { validateTurns, pickTopic } from "@/lib/interview";
@@ -43,7 +43,11 @@ export async function POST(request: Request) {
     for (const [i, t] of turns.value.entries()) {
         messages.push({ role: "assistant", content: JSON.stringify({ question: t.question }) });
         const isLast = i === turns.value.length - 1;
-        messages.push({ role: "user", content: isLast ? `${t.answer}\n\n${FOLLOW_UP_PROMPT}` : t.answer });
+        // 最後の回答のあとにだけ深掘りの指示を付ける（それ以前は会話の流れとして渡す）
+        messages.push({
+            role: "user",
+            content: isLast ? `${t.answer}\n\n${buildFollowUpPrompt(conditions, turns.value.length)}` : t.answer,
+        });
     }
 
     const result = await chat(messages);

@@ -60,7 +60,7 @@ export default function PracticeClient({ conditions }: { conditions: Conditions 
         const res = await fetch("/api/tts", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text: feedback }),
+          body: JSON.stringify({ text: feedback, level: conditions.level }),
         });
 
         if (!res.ok) {
