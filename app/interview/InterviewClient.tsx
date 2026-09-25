@@ -434,7 +434,7 @@ export default function InterviewClient({ conditions }: { conditions: Conditions
 
                                 <div className="flex gap-6 justify-center">
                                     <Link
-                                        href={savedId ? `/history/${savedId}` : "/history"}
+                                        href={savedId ? `/history/${savedId}` : "/history?mode=interview"}
                                         className="px-6 py-3 rounded border border-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">
                                         📋 この面接の記録を見る
                                     </Link>
