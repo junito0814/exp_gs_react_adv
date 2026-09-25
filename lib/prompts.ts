@@ -87,3 +87,128 @@ ${answer}
 2. 全体で250〜350文字程度に収めてください。
 3. 面接官の振る舞い（口調）は system の指示に従ってください。`;
 }
+
+// ============================================================
+// 模擬面接（/api/interview, /api/interview/summary）
+// ============================================================
+
+export const INTERVIEW_TURNS = 3;          // 1 回の面接の往復数
+export const QUESTION_MAX_CHARS = 100;     // 質問の文字数上限（プロンプトで指示）
+const ANSWER_SECONDS_GUIDE = "45〜90 秒";  // 回答の長さの目安
+const ANSWER_CHARS_GUIDE = "200〜400 文字";
+
+// 面接官としての system プロンプト（質問を 1 つだけ返す）
+export function buildInterviewerSystemPrompt(c: Conditions, profileText?: string | null): string {
+    return [
+        buildSystemPrompt(c, profileText),
+        `【面接の進め方】
+- あなたは面接官です。1 回の返答で質問を 1 つだけしてください。
+- 講評・励まし・解説・相槌・前置きは一切書かないでください。返答は必ず質問文で終えてください。
+- 質問は ${QUESTION_MAX_CHARS} 文字以内の 1 文にしてください。
+- 出力は次の JSON だけにしてください（前後に文章を付けない）：{"question": "質問文"}`,
+    ].join("\n\n");
+}
+
+// 最初の質問を求める user メッセージ
+export function buildFirstQuestionPrompt(c: Conditions): string {
+    return `この面接で深掘りするテーマを 1 つ選び、最初の質問をしてください。
+テーマは ${c.career === "new" ? "新卒" : "中途"} の面接でよく問われるもののなかから、志望業界・志望職種に合うものを選んでください。
+毎回同じテーマにならないよう、選ぶテーマに幅を持たせてください。
+これから ${INTERVIEW_TURNS} 往復の面接を行うため、1 問目は答えやすい入口となる質問にしてください。`;
+}
+
+// 深掘りを求める user メッセージ（直前の回答のあとに付ける）
+export const FOLLOW_UP_PROMPT = `いまの回答を踏まえて、深掘りの質問を 1 つしてください。
+- 回答に出てきた言葉を引用・参照して、具体的に掘り下げてください。
+- テーマは変えないでください。
+- 回答が曖昧・抽象的なら、根拠や具体例（できれば数字）を求めてください。`;
+
+// 総評用の system プロンプト。
+// 面接官用（buildInterviewerSystemPrompt）は「JSON で質問だけ返す」と指示しているため、
+// 総評ではそれを使わない（使うと総評の代わりに質問が返ってしまう）
+export function buildSummarySystemPrompt(c: Conditions, profileText?: string | null): string {
+    return [
+        buildSystemPrompt(c, profileText),
+        `【今の役割】
+面接が終わったので、面接官として面接全体を振り返る総評を書いてください。
+質問はもうせず、JSON ではなく指定されたフォーマットの文章で出力してください。`,
+    ].join("\n\n");
+}
+
+// 模擬面接の往復（総評の入力）
+export type SummaryTurn = {
+    question: string;
+    answer: string;
+    smileScore: number;
+    answerSeconds: number;
+};
+
+// 総評を求める user メッセージ
+export function buildSummaryPrompt(turns: SummaryTurn[]): string {
+    const log = turns
+        .map((t, i) => {
+            const n = i + 1;
+            return `【${n} 問目】
+Q: ${t.question}
+A: ${t.answer}
+（笑顔スコア ${t.smileScore}%、回答時間 ${t.answerSeconds} 秒、回答 ${t.answer.length} 文字）`;
+        })
+        .join("\n\n");
+
+    return `面接が終わりました（全 ${turns.length} 往復）。以下のやり取りをもとに総評を書いてください。
+
+${log}
+
+必ず次のフォーマットで、各セクションの間に空行を入れて出力してください。
+
+■ 内容面
+・（良かった点を1〜2点）
+・（改善点を1〜2点）→ 言い換え例：「（具体的な言い換え表現）」
+
+■ 表情
+・（各問の笑顔スコアの推移を挙げ、それをもとに一言）
+
+■ 話し方
+・（各回答の秒数と文字数を挙げ、長すぎ／短すぎ／ちょうどよい を根拠とともに一言）
+
+【指示】
+1. 全体で300〜450文字程度に収めてください。
+2. 「■ 内容面」では、現職・前職・学校への不満や批判、他責的な言い回し、根拠や数字のない実績があれば必ず指摘し、言い換え例を添えてください。
+3. 「■ 表情」では実際のスコアの数値を挙げてください（例：1 問目 35% → 2 問目 62%）。
+4. 「■ 話し方」の目安は 1 回答あたり ${ANSWER_SECONDS_GUIDE}・${ANSWER_CHARS_GUIDE} です。
+5. 面接官の振る舞い（口調）は system の指示に従ってください。
+6. 質問はもうしないでください。`;
+}
+
+// AI の返答から質問文を取り出す。JSON で来なかった場合も落とさない
+export function parseQuestion(text: string): string {
+    const raw = (text ?? "").trim();
+    if (!raw) return "";
+
+    // JSON として読めたら question を返す（空なら空文字＝呼び出し側でエラー扱い）
+    const fromJson = (s: string): string | null => {
+        try {
+            const o = JSON.parse(s);
+            if (o && typeof o === "object" && "question" in o && typeof o.question === "string") {
+                return o.question.trim();
+            }
+        } catch {
+            // JSON ではない
+        }
+        return null;
+    };
+
+    // ① そのまま JSON
+    const direct = fromJson(raw);
+    if (direct !== null) return direct;
+
+    // ② ```json ... ``` や前後に文章が付いている場合、最初の { 〜 最後の } を試す
+    const start = raw.indexOf("{"), end = raw.lastIndexOf("}");
+    if (start !== -1 && end > start) {
+        const inner = fromJson(raw.slice(start, end + 1));
+        if (inner !== null) return inner;
+    }
+
+    // ③ JSON で来なかった場合は本文全体を質問として扱う（コードフェンスだけ落とす）
+    return raw.replace(/^```(?:json)?\s*/i, "").replace(/```$/i, "").trim();
+}
