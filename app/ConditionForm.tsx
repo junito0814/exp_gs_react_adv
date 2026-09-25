@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import {
     INDUSTRIES, JOBS, CAREERS, LEVELS,
     BACKGROUND_LABEL, BACKGROUND_PLACEHOLDER, BACKGROUND_MAX,
-    INTERVIEW_TURNS,
+    INTERVIEW_TURNS, descriptionOf,
 } from "@/lib/options";
 import { DEFAULT_CONDITIONS, toQuery, type Conditions } from "@/lib/conditions";
 
@@ -70,6 +70,10 @@ export default function ConditionForm({ initial }: { initial?: Conditions }) {
                         onChange={(e) => update("level", e.target.value as Conditions["level"])}>
                         {LEVELS.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
                     </select>
+                    {/* 選んだレベルで何が起きるかを示す */}
+                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                        {descriptionOf(LEVELS, c.level)}
+                    </span>
                 </label>
             </div>
 
