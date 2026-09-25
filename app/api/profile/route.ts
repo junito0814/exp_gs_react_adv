@@ -2,7 +2,8 @@
 import { db } from "@/db";
 import { profiles } from "@/db/schema";
 import { requireUserId, unauthorized } from "@/lib/auth";
-import { getProfile, validateProfile } from "@/lib/profile";
+import { validateProfile } from "@/lib/profile";
+import { getProfile } from "@/lib/profile-db";
 
 export async function GET() {
     const userId = await requireUserId();

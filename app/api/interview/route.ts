@@ -1,7 +1,8 @@
 // app/api/interview/route.ts — 模擬面接の質問生成（初回の出題と、回答を踏まえた深掘り）
 import { requireUserId, unauthorized } from "@/lib/auth";
 import { parseConditions } from "@/lib/conditions";
-import { getProfile, formatProfileForPrompt } from "@/lib/profile";
+import { formatProfileForPrompt } from "@/lib/profile";
+import { getProfile } from "@/lib/profile-db";
 import {
     buildInterviewerSystemPrompt, buildFirstQuestionPrompt, FOLLOW_UP_PROMPT,
     parseQuestion, INTERVIEW_TURNS,

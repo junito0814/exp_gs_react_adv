@@ -3,7 +3,8 @@ import { requireUserId, unauthorized } from "@/lib/auth";
 import { parseConditions } from "@/lib/conditions";
 import { TOPIC_MAX } from "@/lib/options";
 import { buildSystemPrompt, buildCoachPrompt } from "@/lib/prompts";
-import { getProfile, formatProfileForPrompt } from "@/lib/profile";
+import { formatProfileForPrompt } from "@/lib/profile";
+import { getProfile } from "@/lib/profile-db";
 
 export async function POST(request: Request) {
     const userId = await requireUserId();
