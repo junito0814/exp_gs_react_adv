@@ -4,9 +4,10 @@
 // 進行は reducer.ts の phase で管理する。
 // 回答 UI（録音）は #16、進行・中断・総評・自動保存は #17 で足す。
 
-import { useCallback, useEffect, useReducer, useRef } from "react";
+import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import Link from "next/link";
 import FaceMeter from "@/app/FaceMeter";
+import Recorder from "@/app/Recorder";
 import { describeConditions, type Conditions } from "@/lib/conditions";
 import type { Turn } from "@/lib/types";
 import { INTERVIEW_TURNS } from "@/lib/prompts";
@@ -16,7 +17,7 @@ const cardClass = "p-6 bg-red-50 dark:bg-gray-700 border-l-4 border-red-500 roun
 
 export default function InterviewClient({ conditions }: { conditions: Conditions }) {
     const [state, dispatch] = useReducer(reducer, initialState);
-    const { phase, topic, question, turns, error } = state;
+    const { phase, topic, question, turns, transcript, answerSeconds, error, fallbackText } = state;
 
     // 笑顔スコアは 0.5 秒ごとに届くので、state ではなく ref で持つ（毎回の再描画を避ける）
     const smileRef = useRef(0);
@@ -50,6 +51,57 @@ export default function InterviewClient({ conditions }: { conditions: Conditions
             dispatch({ type: "failed", error: "通信に失敗しました。ネットワークを確認してください。" });
         }
     }, [conditions]);
+
+    // 録音の開始時刻と、画面に出す経過秒数
+    const startedAtRef = useRef(0);
+    const [elapsed, setElapsed] = useState(0);
+    useEffect(() => {
+        if (phase !== "recording") return;
+        // 1 秒ごとに経過を更新する（0 に戻すのは録音開始のハンドラ側）
+        const timer = setInterval(() => {
+            setElapsed(Math.floor((Date.now() - startedAtRef.current) / 1000));
+        }, 1000);
+        return () => clearInterval(timer);
+    }, [phase]);
+
+    // 録音を始めたら読み上げを止める（自分の声と重ならないように）
+    const handleRecordStart = useCallback(() => {
+        stopSpeaking();
+        startedAtRef.current = Date.now();
+        setElapsed(0);
+        dispatch({ type: "recordStart" });
+    }, [stopSpeaking]);
+
+    const handleRecordStop = useCallback(() => {
+        dispatch({ type: "recordStop" });
+    }, []);
+
+    // 文字起こしが返ってきた（送信待ちにする）
+    const handleText = useCallback((text: string) => {
+        const seconds = Math.max(1, Math.round((Date.now() - startedAtRef.current) / 1000));
+        dispatch({ type: "transcript", text, seconds });
+    }, []);
+
+    // マイクが使えない／文字起こしに失敗した
+    const handleRecorderError = useCallback(() => {
+        dispatch({ type: "transcribeFailed" });
+        dispatch({ type: "useTextFallback" });
+    }, []);
+
+    // 回答を送信する（送信後のやり直しはできない）
+    const submit = useCallback(() => {
+        const answer = transcript.trim();
+        if (!answer) return;
+        dispatch({
+            type: "submit",
+            turn: {
+                question,
+                answer,
+                smileScore: smileRef.current,
+                answerSeconds: answerSeconds || Math.max(1, Math.round((Date.now() - startedAtRef.current) / 1000)),
+            },
+        });
+    }, [transcript, question, answerSeconds]);
 
     // 画面を離れるときは読み上げを止める
     useEffect(() => stopSpeaking, [stopSpeaking]);
@@ -142,10 +194,79 @@ export default function InterviewClient({ conditions }: { conditions: Conditions
                             </div>
                         )}
 
-                        {/* 回答 UI（録音）は #16 で実装する */}
-                        {phase === "answering" && !error && (
+                        {/* 回答（録音のみ。マイクが使えないときだけテキスト入力に切り替わる） */}
+                        {!error && (phase === "answering" || phase === "recording" || phase === "transcribing") && (
+                            <div className="flex flex-col gap-4 items-center">
+                                {phase === "recording" && (
+                                    <p className="text-lg">
+                                        <span className="inline-block w-3 h-3 rounded-full bg-red-500 mr-2" />
+                                        録音中　{String(Math.floor(elapsed / 60)).padStart(2, "0")}:{String(elapsed % 60).padStart(2, "0")}
+                                    </p>
+                                )}
+                                {phase === "transcribing" && (
+                                    <p className="text-gray-600 dark:text-gray-300">文字にしています…</p>
+                                )}
+
+                                {fallbackText ? (
+                                    <div className="w-full flex flex-col gap-2">
+                                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                                            マイクが使えないため、テキストで回答します。
+                                        </p>
+                                        <textarea
+                                            value={transcript}
+                                            onChange={(e) => {
+                                                if (!startedAtRef.current) startedAtRef.current = Date.now();
+                                                dispatch({ type: "transcript", text: e.target.value, seconds: 0 });
+                                            }}
+                                            rows={5}
+                                            className="w-full ring-2 ring-gray-300 dark:ring-gray-600 rounded p-2 bg-white dark:bg-gray-700"
+                                            placeholder="ここに回答を入力"
+                                        />
+                                    </div>
+                                ) : (
+                                    <>
+                                        {transcript ? (
+                                            <div className={`${cardClass} w-full border-dashed`}>
+                                                <div className="flex justify-between items-baseline mb-2">
+                                                    <h2 className="font-bold">あなたの回答（編集できません）</h2>
+                                                    <span className="text-sm">⏱ {answerSeconds} 秒</span>
+                                                </div>
+                                                <p className="whitespace-pre-wrap">{transcript}</p>
+                                            </div>
+                                        ) : (
+                                            <Recorder
+                                                onText={handleText}
+                                                onStart={handleRecordStart}
+                                                onStop={handleRecordStop}
+                                                onError={handleRecorderError}
+                                                disabled={phase === "transcribing"}
+                                            />
+                                        )}
+                                    </>
+                                )}
+
+                                {(transcript || fallbackText) && phase === "answering" && (
+                                    <div className="flex flex-col items-center gap-2">
+                                        <button
+                                            onClick={submit}
+                                            disabled={transcript.trim() === ""}
+                                            className="bg-red-400 text-white px-8 py-3 rounded hover:bg-red-500
+                                                transition duration-300 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer">
+                                            送信する
+                                        </button>
+                                        {transcript.trim() === "" && (
+                                            <p className="text-sm text-gray-500 dark:text-gray-400">
+                                                回答が空です。もう一度録音してください。
+                                            </p>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {phase === "submitting" && (
                             <p className="text-center text-sm text-gray-500 dark:text-gray-400">
-                                （回答の録音は次の段階で実装します）
+                                （次の質問・総評への進行は次の段階で実装します）
                             </p>
                         )}
                     </>
