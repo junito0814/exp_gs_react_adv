@@ -15,6 +15,13 @@
       "when": 1789906342967,
       "tag": "0001_sessions_conditions",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790313482213,
+      "tag": "0002_turns_profiles",
+      "breakpoints": true
     }
   ]
 }
