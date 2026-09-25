@@ -75,15 +75,14 @@ export default function ConditionForm({ initial }: { initial?: Conditions }) {
             <div className="flex flex-wrap gap-4 justify-center mt-8">
                 <button
                     type="button"
-                    disabled
-                    title="第 2 段階で有効になります"
-                    className="px-6 py-3 rounded border-2 border-dashed border-gray-400 text-gray-400 cursor-not-allowed">
-                    🎤 模擬面接を始める（準備中）
+                    onClick={() => router.push(`/interview?${toQuery(c)}`)}
+                    className="bg-red-400 text-white px-6 py-3 rounded hover:bg-red-500 transition duration-300 transform hover:scale-105 cursor-pointer">
+                    🎤 模擬面接を始める
                 </button>
                 <button
                     type="button"
                     onClick={() => router.push(`/practice?${toQuery(c)}`)}
-                    className="bg-red-400 text-white px-6 py-3 rounded hover:bg-red-500 transition duration-300 transform hover:scale-105 cursor-pointer">
+                    className="px-6 py-3 rounded border border-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition duration-300 cursor-pointer">
                     ✎ 講評モードで練習
                 </button>
             </div>
