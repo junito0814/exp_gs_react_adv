@@ -15,6 +15,8 @@ import type { Turn } from "@/lib/types";
 import { initialState, reducer } from "./reducer";
 
 const cardClass = "p-6 bg-red-50 dark:bg-gray-700 border-l-4 border-red-500 rounded-r-lg shadow-md leading-relaxed";
+// 圧迫のときは面接官のカードを暗くして、画面の雰囲気も変える
+const harshCardClass = "p-6 bg-gray-800 dark:bg-black text-white border-l-4 border-gray-500 rounded-r-lg shadow-md leading-relaxed";
 
 export default function InterviewClient({ conditions }: { conditions: Conditions }) {
     const [state, dispatch] = useReducer(reducer, initialState);
@@ -137,7 +139,7 @@ export default function InterviewClient({ conditions }: { conditions: Conditions
             const res = await fetch("/api/tts", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ text: state.summary }),
+                body: JSON.stringify({ text: state.summary, level: conditions.level }),
             });
             if (!res.ok) throw new Error("TTS に失敗しました");
             const data = await res.json();
@@ -216,7 +218,7 @@ export default function InterviewClient({ conditions }: { conditions: Conditions
                 const res = await fetch("/api/tts", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ text: question }),
+                    body: JSON.stringify({ text: question, level: conditions.level }),
                 });
                 if (!res.ok) throw new Error("TTS に失敗しました");
                 const data = await res.json();
@@ -231,8 +233,10 @@ export default function InterviewClient({ conditions }: { conditions: Conditions
             }
         })();
         return () => { cancelled = true; };
-    }, [question]);
+    }, [question, conditions.level]);
 
+    const isHarsh = conditions.level === "harsh";
+    const questionCardClass = isHarsh ? harshCardClass : cardClass;
     const started = phase !== "idle";
     const turnNumber = Math.min(turns.length + 1, INTERVIEW_TURNS);
 
@@ -300,7 +304,7 @@ export default function InterviewClient({ conditions }: { conditions: Conditions
                         ) : phase === "summarizing" ? (
                             <p className="text-center text-gray-600 dark:text-gray-300">総評をまとめています…</p>
                         ) : phase !== "done" ? (
-                            <div className={cardClass}>
+                            <div className={questionCardClass}>
                                 <h2 className="font-bold mb-2">面接官</h2>
                                 <p className="whitespace-pre-wrap">🔊 {question}</p>
                             </div>
