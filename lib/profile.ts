@@ -1,7 +1,7 @@
-// lib/profile.ts — プロフィール（ES・職務経歴書・免許資格）の検証と読み出し
-import { db } from "@/db";
-import { profiles } from "@/db/schema";
-import { eq } from "drizzle-orm";
+// lib/profile.ts — プロフィール（ES・職務経歴書・免許資格）の型・上限・検証・整形
+// DB アクセスは lib/profile-db.ts に分けている。
+// このファイルはクライアントコンポーネント（ProfileForm）からも import するため、
+// db/index.ts（neon の接続）を読み込んではいけない（ブラウザで DATABASE_URL が無く落ちる）
 import type { HistoryRow } from "./types";
 
 export const ES_MAX = 2000;
@@ -63,13 +63,6 @@ export function validateProfile(body: unknown): { ok: true; value: Profile } | {
     return { ok: true, value: { es, history, qualifications } };
 }
 
-// 本人のプロフィールを取得（未登録なら空）
-export async function getProfile(userId: string): Promise<Profile> {
-    const rows = await db.select().from(profiles).where(eq(profiles.userId, userId));
-    const row = rows[0];
-    if (!row) return EMPTY_PROFILE;
-    return { es: row.es, history: row.history ?? [], qualifications: row.qualifications };
-}
 
 // 3 項目すべて空か（トップの案内表示に使う）
 export function isProfileEmpty(p: Profile): boolean {

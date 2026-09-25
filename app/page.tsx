@@ -3,7 +3,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import ConditionForm from "./ConditionForm";
 import { requireUserId } from "@/lib/auth";
-import { getProfile, isProfileEmpty } from "@/lib/profile";
+import { isProfileEmpty } from "@/lib/profile";
+import { getProfile } from "@/lib/profile-db";
 
 export const dynamic = "force-dynamic";
 

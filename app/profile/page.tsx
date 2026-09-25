@@ -2,7 +2,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { requireUserId } from "@/lib/auth";
-import { getProfile } from "@/lib/profile";
+import { getProfile } from "@/lib/profile-db";
 import ProfileForm from "./ProfileForm";
 
 export const dynamic = "force-dynamic";
