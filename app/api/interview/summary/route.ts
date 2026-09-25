@@ -1,7 +1,8 @@
 // app/api/interview/summary/route.ts — 模擬面接の総評（内容面・表情・話し方）
 import { requireUserId, unauthorized } from "@/lib/auth";
 import { parseConditions } from "@/lib/conditions";
-import { getProfile, formatProfileForPrompt } from "@/lib/profile";
+import { formatProfileForPrompt } from "@/lib/profile";
+import { getProfile } from "@/lib/profile-db";
 import { buildSummarySystemPrompt, buildSummaryPrompt } from "@/lib/prompts";
 import { validateTurns } from "@/lib/interview";
 import { chat } from "@/lib/groq";
