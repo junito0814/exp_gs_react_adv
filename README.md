@@ -111,9 +111,9 @@ http://localhost:3000 を開き、Google でログインします。**カメラ�
 
 | ファイル | 内容 |
 | --- | --- |
-| [docs/01_要求.md](docs/01_要求.md) | 背景・ペルソナ・要求一覧・決定事項 |
-| [docs/02_要件定義.md](docs/02_要件定義.md) | 機能要件・データ要件・非機能要件・プロンプト要件 |
-| [docs/03_ユーザーストーリー/](docs/03_ユーザーストーリー/README.md) | 受け入れ条件 |
-| [docs/04_タスク/](docs/04_タスク/README.md) | 実装タスクと進捗 |
-| [docs/05_ワイヤーフレーム.md](docs/05_ワイヤーフレーム.md) | 画面構成と遷移 |
+| [docs/01_requests.md](docs/01_requests.md) | 背景・ペルソナ・要求一覧・決定事項 |
+| [docs/02_requirements.md](docs/02_requirements.md) | 機能要件・データ要件・非機能要件・プロンプト要件 |
+| [docs/03_user_stories/](docs/03_user_stories/README.md) | 受け入れ条件 |
+| [docs/04_tasks/](docs/04_tasks/README.md) | 実装タスクと進捗 |
+| [docs/05_wireframes.md](docs/05_wireframes.md) | 画面構成と遷移 |
 | [docs/deployment.md](docs/deployment.md) | デプロイ手順（Vercel）・環境変数・つまずきやすい点 |
