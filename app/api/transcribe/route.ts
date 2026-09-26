@@ -21,6 +21,8 @@ export async function POST(request: Request) {
     groqForm.append("file", audio, "audio.webm");
     groqForm.append("model", "whisper-large-v3-turbo");
     groqForm.append("language", "ja");
+    // segments のタイムスタンプが要る（最初に声が出た位置＝考えていた時間）
+    groqForm.append("response_format", "verbose_json");
 
     try {
         const res = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
@@ -33,7 +35,10 @@ export async function POST(request: Request) {
             console.error("Groq(Whisper)エラー:", data);
             return Response.json({ error: "文字起こしに失敗しました" }, { status: 502 });
         }
-        return Response.json({ text: data.text });
+        // 最初の segment の start = 録音開始から声が出るまでの秒数。返らないこともある
+        const start = Array.isArray(data.segments) ? Number(data.segments[0]?.start) : NaN;
+        const speechStart = Number.isFinite(start) && start >= 0 ? start : undefined;
+        return Response.json({ text: data.text, speechStart });
     } catch (e) {
         console.error("Groq(Whisper)通信エラー:", e);
         return Response.json({ error: "文字起こしに失敗しました" }, { status: 502 });

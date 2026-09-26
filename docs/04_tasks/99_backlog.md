@@ -15,3 +15,4 @@
 | T-907 | 笑顔以外の表情指標 | 要求 6 章「将来の候補」 | [ ] |
 | T-908 | `proxy.ts` の `createRouteMatcher` が Clerk の次のメジャーで削除される（起動時に DEPRECATION WARNING） | ログに毎回出る | [ ] |
 | T-909 | T-903（FaceMeter の警告）を直したら CI の lint を `--max-warnings=0` にして警告も落とす | CI で警告が見逃される | [ ] |
+| T-910 | 回答までの時間（`thinkingSeconds`）を履歴の詳細にも表示する | いまは総評の文章にしか出ない | [ ] |
