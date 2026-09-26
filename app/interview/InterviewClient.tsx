@@ -2,7 +2,7 @@
 // app/interview/InterviewClient.tsx — 模擬面接（質問 → 回答 → 深掘り → 総評）
 //
 // 進行は reducer.ts の phase で管理する。
-// 回答 UI（録音）は #16、進行・中断・総評・自動保存は #17 で足す。
+// 回答は録音して文字起こしする（ボタンの文言は「話す」）。
 
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import Link from "next/link";
@@ -25,10 +25,23 @@ export default function InterviewClient({ conditions }: { conditions: Conditions
 
     // 笑顔スコアは 0.5 秒ごとに届くので、state ではなく ref で持つ（毎回の再描画を避ける）
     const smileRef = useRef(0);
+    // 話している間だけスコアを貯めて、その平均を回答のスコアにする
+    // （送信時点の一瞬の値だと、画面を操作している顔が記録されてしまう）
+    const collectingRef = useRef(false);
+    const samplesRef = useRef<number[]>([]);
     // FaceMeter に渡す関数は固定する（毎回新しい関数だとカメラが再起動する）
-    const handleScore = useCallback((n: number) => { smileRef.current = n; }, []);
+    const handleScore = useCallback((n: number) => {
+        smileRef.current = n;
+        if (collectingRef.current) samplesRef.current.push(n);
+    }, []);
+    // 話している間の平均。1 件も取れなかったときは直近の値を使う
+    const answerSmileScore = () => {
+        const xs = samplesRef.current;
+        if (xs.length === 0) return smileRef.current;
+        return Math.round(xs.reduce((a, b) => a + b, 0) / xs.length);
+    };
 
-    // 読み上げ中の音声。録音開始時や次の質問に進むときに止める
+    // 読み上げ中の音声。話し始めたときや次の質問に進むときに止める
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const stopSpeaking = useCallback(() => {
         audioRef.current?.pause();
@@ -56,27 +69,30 @@ export default function InterviewClient({ conditions }: { conditions: Conditions
         }
     }, [conditions]);
 
-    // 録音の開始時刻と、画面に出す経過秒数
+    // 話し始めた時刻と、画面に出す経過秒数
     const startedAtRef = useRef(0);
     const [elapsed, setElapsed] = useState(0);
     useEffect(() => {
         if (phase !== "recording") return;
-        // 1 秒ごとに経過を更新する（0 に戻すのは録音開始のハンドラ側）
+        // 1 秒ごとに経過を更新する（0 に戻すのは話し始めのハンドラ側）
         const timer = setInterval(() => {
             setElapsed(Math.floor((Date.now() - startedAtRef.current) / 1000));
         }, 1000);
         return () => clearInterval(timer);
     }, [phase]);
 
-    // 録音を始めたら読み上げを止める（自分の声と重ならないように）
+    // 話し始めたら読み上げを止める（自分の声と重ならないように）
     const handleRecordStart = useCallback(() => {
         stopSpeaking();
         startedAtRef.current = Date.now();
         setElapsed(0);
+        samplesRef.current = [];
+        collectingRef.current = true;
         dispatch({ type: "recordStart" });
     }, [stopSpeaking]);
 
     const handleRecordStop = useCallback(() => {
+        collectingRef.current = false;
         dispatch({ type: "recordStop" });
     }, []);
 
@@ -101,7 +117,7 @@ export default function InterviewClient({ conditions }: { conditions: Conditions
             turn: {
                 question,
                 answer,
-                smileScore: smileRef.current,
+                smileScore: answerSmileScore(),
                 answerSeconds: answerSeconds || Math.max(1, Math.round((Date.now() - startedAtRef.current) / 1000)),
             },
         });
@@ -254,7 +270,7 @@ export default function InterviewClient({ conditions }: { conditions: Conditions
                             <ul className="list-disc list-inside">
                                 <li>この面接は {INTERVIEW_TURNS} 往復です。</li>
                                 <li>質問は音声で読み上げられます。</li>
-                                <li>回答は録音のみで、送信後のやり直しはできません。</li>
+                                <li>回答は話すだけです。送信後のやり直しはできません。</li>
                                 <li>カメラとマイクの許可が必要です。</li>
                             </ul>
                         </div>
@@ -310,13 +326,13 @@ export default function InterviewClient({ conditions }: { conditions: Conditions
                             </div>
                         ) : null}
 
-                        {/* 回答（録音のみ。マイクが使えないときだけテキスト入力に切り替わる） */}
+                        {/* 回答（話すだけ。マイクが使えないときだけテキスト入力に切り替わる） */}
                         {!error && (phase === "answering" || phase === "recording" || phase === "transcribing") && (
                             <div className="flex flex-col gap-4 items-center">
                                 {phase === "recording" && (
                                     <p className="text-lg">
                                         <span className="inline-block w-3 h-3 rounded-full bg-red-500 mr-2" />
-                                        録音中　{String(Math.floor(elapsed / 60)).padStart(2, "0")}:{String(elapsed % 60).padStart(2, "0")}
+                                        話しています　{String(Math.floor(elapsed / 60)).padStart(2, "0")}:{String(elapsed % 60).padStart(2, "0")}
                                     </p>
                                 )}
                                 {phase === "transcribing" && (
@@ -372,7 +388,7 @@ export default function InterviewClient({ conditions }: { conditions: Conditions
                                         </button>
                                         {transcript.trim() === "" && (
                                             <p className="text-sm text-gray-500 dark:text-gray-400">
-                                                回答が空です。もう一度録音してください。
+                                                回答が空です。もう一度話してください。
                                             </p>
                                         )}
                                     </div>

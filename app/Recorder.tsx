@@ -9,9 +9,15 @@ type Props = {
     onStop?: () => void;           // 録音を止めた（このあと文字起こし）
     onError?: () => void;          // マイクが使えなかった／文字起こしに失敗した
     disabled?: boolean;
+    startLabel?: string;           // 開始前のボタン文言
+    stopLabel?: string;            // 話している間のボタン文言
 };
 
-export default function Recorder({ onText, onStart, onStop, onError, disabled }: Props) {
+export default function Recorder({
+    onText, onStart, onStop, onError, disabled,
+    startLabel = "🎤 話す",
+    stopLabel = "■ 話し終えた",
+}: Props) {
     const [recording, setRecording] = useState(false);
     const recorderRef = useRef<MediaRecorder | null>(null);
     const chunksRef = useRef<Blob[]>([]);
@@ -63,7 +69,7 @@ export default function Recorder({ onText, onStart, onStop, onError, disabled }:
 
     return (
         <button onClick={recording ? stopRec : startRec} disabled={disabled} className="disabled:opacity-50">
-            {recording ? "■ 録音停止して文字にする" : "🎤 録音する"}
+            {recording ? stopLabel : startLabel}
         </button>
     );
 }
