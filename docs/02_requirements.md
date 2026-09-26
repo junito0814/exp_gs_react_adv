@@ -133,7 +133,7 @@
 | FR-I05 | 回答は **録音のみ**（`Recorder` を流用）。録音停止で文字起こしし、文字起こし結果を表示して「送信」できる。文字起こし結果の編集は **不可** | 決定 4, 28 | 新規 |
 | FR-I06 | マイクが使えない場合に限り、テキスト入力欄に切り替える（フォールバック） | 決定 28 | 新規 |
 | FR-I07 | 回答が空（文字起こし結果が空文字・空白のみ）のときは送信できない | 決定 6（簡易） | 新規 |
-| FR-I08 | 送信時に往復データ `{question, answer, smileScore, answerSeconds}` を蓄積する。`smileScore` は送信時点の値、`answerSeconds` は録音開始〜停止の秒数 | REQ-21, 決定 15 | 新規 |
+| FR-I08 | 送信時に往復データ `{question, answer, smileScore, answerSeconds}` を蓄積する。`smileScore` は **話している間の平均**（0.5 秒ごとの計測値の平均。サンプルが無ければ直近の値）、`answerSeconds` は話し始め〜話し終えの秒数 | REQ-21, 決定 15 | 新規 |
 | FR-I09 | 送信後、往復数が 3 未満なら `/api/interview` に全往復を送り、**回答を踏まえた深掘り質問** を取得して FR-I04 へ戻る | REQ-15 | 新規 |
 | FR-I10 | 往復数が 3 に達したら自動で総評生成に進む | 決定 1 | 新規 |
 | FR-I11 | 「面接中断」ボタンを常時表示する。確認ダイアログの後、往復が 1 以上ならそこまでの内容で総評を生成する。往復 0 なら保存せずトップへ戻る | 決定 3 | 新規 |
@@ -274,10 +274,10 @@
 | level | text | NOT NULL | `kind` / `strict` / `harsh` | 1 |
 | topic | text | NOT NULL | 講評：テーマ／模擬面接：AI が選んだテーマ（最初の質問） | 済 |
 | answer_text | text | | 講評モードの回答 | 済 |
-| smile_score | integer | | 講評：送信時／模擬面接：最終往復の送信時 | 済 |
+| smile_score | integer | | 講評：送信時点／模擬面接：最終往復の平均（話している間） | 済 |
 | feedback | text | | 講評：講評文／模擬面接：総評 | 済 |
 | memo | text | | 講評モードのメモ | 済 |
-| turns | jsonb | | 模擬面接の往復 `[{question, answer, smileScore, answerSeconds}]` | 2 |
+| turns | jsonb | | 模擬面接の往復 `[{question, answer, smileScore, answerSeconds}]`（`smileScore` は話している間の平均） | 2 |
 | created_at | timestamp | NOT NULL default now() | | 済 |
 
 ### `profiles`（新規・第 2 段階）
