@@ -1,0 +1,56 @@
+# CI: PR を開いたとき・main に push したときに、手元でやっている 3 つの確認を自動で回す。
+#   1. 型チェック（tsc）  2. lint（eslint）  3. 本番ビルド（next build）
+# どれか 1 つでも赤なら PR 画面に ✗ が出る。
+#
+# ビルドは Clerk・Neon・Groq のキーの「中身」までは見ない（接続しない）ので、
+# ここではダミーの値を環境変数に入れて通す。本物のキーは GitHub に置かない。
+# デプロイは Vercel の GitHub 連携が行う（docs/deployment.md）。このワークフローは関与しない。
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  # 同じブランチで push が続いたら古い実行を止める（Actions の分数を節約）
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: tsc / eslint / build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      # ダミー値。Clerk の publishable key は形式（pk_test_ + base64）を満たす必要がある
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: pk_test_Y2ktZHVtbXkuY2xlcmsuYWNjb3VudHMuZGV2JA
+      CLERK_SECRET_KEY: sk_test_ci-dummy
+      DATABASE_URL: postgresql://user:pass@ci-dummy.neon.tech/db?sslmode=require
+      GROQ_API_KEY: ci-dummy
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      # Next.js が生成する型（.next/types の LayoutProps など）を先に作る。
+      # 手元では next dev / next build が作っているので気づきにくい
+      - name: Generate Next.js types
+        run: npx next typegen
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      # app/FaceMeter.tsx に既知の警告が 1 件ある（T-903）。解消したら --max-warnings=0 にする
+      - name: Lint
+        run: npx eslint
+
+      - name: Build
+        run: npm run build

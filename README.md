@@ -1,5 +1,7 @@
 # AI 面接コーチ
 
+[![CI](https://github.com/junito0814/exp_gs_react_adv/actions/workflows/ci.yml/badge.svg)](https://github.com/junito0814/exp_gs_react_adv/actions/workflows/ci.yml)
+
 ブラウザだけで面接練習ができる Web アプリ。AI が面接官役になって出題・深掘りし、**回答の内容・表情（笑顔）・話し方** の 3 軸で講評します。
 
 ## 2 つの練習モード
@@ -80,6 +82,12 @@ http://localhost:3000 を開き、Google でログインします。**カメラ�
 
 > `npm run dev` と `npm run db:push` には `NODE_OPTIONS=--no-network-family-autoselection` が付いています。これが無いと環境によって Neon への接続が IPv6 でタイムアウトします。
 
+## CI / デプロイ
+
+- **CI**：PR と `main` への push で GitHub Actions が型チェック・lint・本番ビルドを回す（[.github/workflows/ci.yml](.github/workflows/ci.yml)）。キーはダミー値で通るため、本物のキーは GitHub に置いていない。
+- **デプロイ**：Vercel の GitHub 連携。`main` に push で本番、PR ごとに Preview URL。手順と環境変数は [docs/deployment.md](docs/deployment.md) を参照。
+- **DB のマイグレーションは自動実行しない**。`npm run db:push` は手元から実行する（理由は deployment.md）。
+
 ## スクリプト
 
 | コマンド | 内容 |
@@ -108,3 +116,4 @@ http://localhost:3000 を開き、Google でログインします。**カメラ�
 | [docs/03_ユーザーストーリー/](docs/03_ユーザーストーリー/README.md) | 受け入れ条件 |
 | [docs/04_タスク/](docs/04_タスク/README.md) | 実装タスクと進捗 |
 | [docs/05_ワイヤーフレーム.md](docs/05_ワイヤーフレーム.md) | 画面構成と遷移 |
+| [docs/deployment.md](docs/deployment.md) | デプロイ手順（Vercel）・環境変数・つまずきやすい点 |
