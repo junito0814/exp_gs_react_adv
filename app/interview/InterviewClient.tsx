@@ -41,6 +41,19 @@ export default function InterviewClient({ conditions }: { conditions: Conditions
         return Math.round(xs.reduce((a, b) => a + b, 0) / xs.length);
     };
 
+    // 面接中ずっと使うマイク。「面接を始める」で 1 回だけ許可を取り、3 往復で使い回す。
+    // Recorder に渡す＝描画で読むので、ref ではなく state で持つ
+    const [micStream, setMicStream] = useState<MediaStream | null>(null);
+    // 読み上げが終わった質問。これが今の質問と一致したら「話してよい」合図になる
+    // （state を effect の中で false に戻す必要がないよう、質問文そのものを持つ）
+    const [readyFor, setReadyFor] = useState("");
+
+    // マイクを差し替えたとき・画面を離れたときに、そのマイクを離す
+    useEffect(() => {
+        if (!micStream) return;
+        return () => micStream.getTracks().forEach((t) => t.stop());
+    }, [micStream]);
+
     // 読み上げ中の音声。話し始めたときや次の質問に進むときに止める
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const stopSpeaking = useCallback(() => {
@@ -96,9 +109,13 @@ export default function InterviewClient({ conditions }: { conditions: Conditions
         dispatch({ type: "recordStop" });
     }, []);
 
+    // 面接官が話し終えてから声を出すまでの秒数（文字起こしの発話開始位置）
+    const thinkingRef = useRef<number | undefined>(undefined);
+
     // 文字起こしが返ってきた（送信待ちにする）
-    const handleText = useCallback((text: string) => {
+    const handleText = useCallback((text: string, info?: { speechStart?: number }) => {
         const seconds = Math.max(1, Math.round((Date.now() - startedAtRef.current) / 1000));
+        thinkingRef.current = typeof info?.speechStart === "number" ? Math.round(info.speechStart) : undefined;
         dispatch({ type: "transcript", text, seconds });
     }, []);
 
@@ -119,6 +136,7 @@ export default function InterviewClient({ conditions }: { conditions: Conditions
                 answer,
                 smileScore: answerSmileScore(),
                 answerSeconds: answerSeconds || Math.max(1, Math.round((Date.now() - startedAtRef.current) / 1000)),
+                ...(thinkingRef.current !== undefined ? { thinkingSeconds: thinkingRef.current } : {}),
             },
         });
     }, [transcript, question, answerSeconds]);
@@ -178,10 +196,25 @@ export default function InterviewClient({ conditions }: { conditions: Conditions
         setIsSpeaking(false);
     }
 
+    // 面接の開始：先にマイクの許可を取り（ここはクリック直後なので許可が求められる）、
+    // それから最初の質問を取りに行く。マイクが使えないときはテキスト回答に切り替える
+    const startInterview = useCallback(async () => {
+        try {
+            setMicStream(await navigator.mediaDevices.getUserMedia({ audio: true }));
+        } catch (e) {
+            console.error("マイクを使えませんでした:", e);
+            dispatch({ type: "useTextFallback" });
+        }
+        await fetchQuestion([], "");
+    }, [fetchQuestion]);
+
     // 総評を作って自動保存する（3 往復終了時・中断時）
     const fetchSummary = useCallback(async (turnsNow: Turn[]) => {
         dispatch({ type: "summarize" });
         stopSpeaking();
+        // 面接が終わるのでマイクを離す（state は触らない。effect の中から
+        // 同期的に state を更新すると余計な再描画を招くため、トラックだけ止める）
+        micStream?.getTracks().forEach((t) => t.stop());
         let text = "";
         try {
             const res = await fetch("/api/interview/summary", {
@@ -202,7 +235,7 @@ export default function InterviewClient({ conditions }: { conditions: Conditions
         }
         // 総評ができたら保存まで自動で行う（保存ボタンは押させない）
         await save(turnsNow, text);
-    }, [conditions, stopSpeaking, save]);
+    }, [conditions, stopSpeaking, save, micStream]);
 
     // 回答を送ったら、3 往復目までは深掘り、3 往復に達したら総評へ
     useEffect(() => {
@@ -229,6 +262,7 @@ export default function InterviewClient({ conditions }: { conditions: Conditions
     useEffect(() => {
         if (!question) return;
         let cancelled = false;
+        let fallback: ReturnType<typeof setTimeout> | undefined;
         (async () => {
             try {
                 const res = await fetch("/api/tts", {
@@ -241,16 +275,22 @@ export default function InterviewClient({ conditions }: { conditions: Conditions
                 if (cancelled) return;
                 const audio = new Audio("data:audio/mp3;base64," + data.audio);
                 audioRef.current = audio;
-                audio.onended = () => { audioRef.current = null; };
+                // 読み上げ終了が「話してよい」合図。ここから録音が自動で始まる
+                audio.onended = () => { audioRef.current = null; setReadyFor(question); };
+                audio.onerror = () => { audioRef.current = null; setReadyFor(question); };
                 await audio.play();
             } catch (e) {
-                // 読み上げが失敗してもテキストは出ているので、そのまま進める
+                // 読み上げが失敗してもテキストは出ているので、そのまま進める。
+                // ended が来ないので、質問表示から 1.5 秒後に話し始めてもらう
                 console.error("質問の読み上げに失敗:", e);
+                if (!cancelled) fallback = setTimeout(() => setReadyFor(question), 1500);
             }
         })();
-        return () => { cancelled = true; };
+        return () => { cancelled = true; if (fallback) clearTimeout(fallback); };
     }, [question, conditions.level]);
 
+    // 読み上げが終わった質問と今の質問が一致したら、話してよい合図
+    const readyToSpeak = question !== "" && readyFor === question;
     const isHarsh = conditions.level === "harsh";
     const questionCardClass = isHarsh ? harshCardClass : cardClass;
     const started = phase !== "idle";
@@ -270,13 +310,14 @@ export default function InterviewClient({ conditions }: { conditions: Conditions
                             <ul className="list-disc list-inside">
                                 <li>この面接は {INTERVIEW_TURNS} 往復です。</li>
                                 <li>質問は音声で読み上げられます。</li>
-                                <li>回答は話すだけです。送信後のやり直しはできません。</li>
+                                <li>質問が読み終わると、自動で録音が始まります。</li>
+                                <li>話し終えたら「話し終わり」を押してください。送信後のやり直しはできません。</li>
                                 <li>カメラとマイクの許可が必要です。</li>
                             </ul>
                         </div>
                         <div className="flex justify-center">
                             <button
-                                onClick={() => fetchQuestion([], "")}
+                                onClick={startInterview}
                                 className="bg-red-400 text-white px-8 py-3 rounded hover:bg-red-500
                                     transition duration-300 transform hover:scale-105 cursor-pointer">
                                 面接を始める
@@ -365,14 +406,23 @@ export default function InterviewClient({ conditions }: { conditions: Conditions
                                                 </div>
                                                 <p className="whitespace-pre-wrap">{transcript}</p>
                                             </div>
-                                        ) : (
+                                        ) : readyToSpeak ? (
+                                            // 読み上げが終わったら自動で録音が始まる。
+                                            // key を往復ごとに変えて作り直すことで、マウント時に 1 回だけ開始する
                                             <Recorder
+                                                key={turns.length}
+                                                autoStart
+                                                stream={micStream}
                                                 onText={handleText}
                                                 onStart={handleRecordStart}
                                                 onStop={handleRecordStop}
                                                 onError={handleRecorderError}
                                                 disabled={phase === "transcribing"}
                                             />
+                                        ) : (
+                                            <p className="text-gray-500 dark:text-gray-400">
+                                                質問を聞いてください。読み終わると録音が始まります。
+                                            </p>
                                         )}
                                     </>
                                 )}

@@ -116,6 +116,9 @@ export const QUESTION_MAX_CHARS = 100;     // 質問の文字数上限（プロ�
 export const QUESTION_MAX_CHARS_HARSH = 140;
 const ANSWER_SECONDS_GUIDE = "45〜90 秒";  // 回答の長さの目安
 const ANSWER_CHARS_GUIDE = "200〜400 文字";
+// 回答までの時間（面接官が話し終えてから声を出すまで）の目安
+const THINKING_NATURAL_MAX = 3;  // これ以内は自然
+const THINKING_LONG_MIN = 5;     // これを超えたら長い
 
 // 面接官としての system プロンプト（質問を 1 つだけ返す）
 export function buildInterviewerSystemPrompt(c: Conditions, profileText?: string | null): string {
@@ -185,6 +188,7 @@ export type SummaryTurn = {
     answer: string;
     smileScore: number;
     answerSeconds: number;
+    thinkingSeconds?: number; // 面接官が話し終えてから声を出すまで（測れなければ省略）
 };
 
 // 総評を求める user メッセージ
@@ -192,10 +196,13 @@ export function buildSummaryPrompt(turns: SummaryTurn[]): string {
     const log = turns
         .map((t, i) => {
             const n = i + 1;
+            const thinking = t.thinkingSeconds !== undefined
+                ? `、回答までの時間 ${t.thinkingSeconds} 秒`
+                : "";
             return `【${n} 問目】
 Q: ${t.question}
 A: ${t.answer}
-（笑顔スコア ${t.smileScore}%、回答時間 ${t.answerSeconds} 秒、回答 ${t.answer.length} 文字）`;
+（笑顔スコア ${t.smileScore}%、回答時間 ${t.answerSeconds} 秒、回答 ${t.answer.length} 文字${thinking}）`;
         })
         .join("\n\n");
 
@@ -214,6 +221,7 @@ ${log}
 
 ■ 話し方
 ・（各回答の秒数と文字数を挙げ、長すぎ／短すぎ／ちょうどよい を根拠とともに一言）
+・（回答までの時間について一言。データに無ければこの行を書かない）
 
 ${NG_EXPRESSIONS}
 
@@ -222,8 +230,9 @@ ${NG_EXPRESSIONS}
 2. 「■ 内容面」の改善点には、上記の NG 表現の指摘を必ず含めてください。
 3. 「■ 表情」では実際のスコアの数値を挙げてください（例：1 問目 35% → 2 問目 62%）。
 4. 「■ 話し方」の目安は 1 回答あたり ${ANSWER_SECONDS_GUIDE}・${ANSWER_CHARS_GUIDE} です。
-5. 面接官の振る舞い（口調）は system の指示に従ってください。
-6. 質問はもうしないでください。`;
+5. 「回答までの時間」は、面接官が話し終えてから回答者が声を出すまでの秒数です。${THINKING_NATURAL_MAX} 秒以内なら自然なので褒める必要も直す必要もありません。${THINKING_LONG_MIN} 秒を超えたら「間が長い」と伝え、質問の型を用意しておく等の対処を書いてください。0〜1 秒の即答が続く場合は「用意した答えを読んでいるように聞こえることがある」と伝えてください。沈黙そのものを一律に悪いと書かないでください。データに「回答までの時間」が無い場合は、その話題を **一切書かないでください**（「データがない」と書くこともしないでください）。
+6. 面接官の振る舞い（口調）は system の指示に従ってください。
+7. 質問はもうしないでください。`;
 }
 
 // AI の返答から質問文を取り出す。JSON で来なかった場合も落とさない

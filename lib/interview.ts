@@ -54,9 +54,11 @@ export function validateTurns(
                 return { ok: false, error: `turns[${i}].answerSeconds が不正です` };
             }
         }
+        const thinking = Number(t.thinkingSeconds);
         turns.push({
             question,
             answer,
+            ...(Number.isFinite(thinking) && thinking >= 0 ? { thinkingSeconds: Math.round(thinking) } : {}),
             smileScore: Number.isFinite(smileScore) ? Math.round(Math.min(Math.max(smileScore, 0), 100)) : 0,
             answerSeconds: Number.isFinite(answerSeconds) ? Math.round(Math.max(answerSeconds, 0)) : 0,
         });
