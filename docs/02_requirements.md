@@ -41,7 +41,7 @@
 
 ```
 /sign-in ──▶ /
-             ├─ 条件を選ぶ ─┬─ [講評モードで練習] ──▶ /practice?industry=..&job=..&career=..&level=..&background=..
+             ├─ 条件を選ぶ ─┬─ [講評モードで練習] ──▶ /practice?industry=..&job=..&career=..&level=..&background=..&stage=..&company=..
              │              └─ [模擬面接を始める] ──▶ /interview?（同じクエリ）
              ├─ [プロフィール設定] ──▶ /profile
              └─ [履歴を見る] ────────▶ /history?mode=interview|practice ──▶ /history/[id]
@@ -61,8 +61,8 @@
 | `career` | 区分 | `new`（新卒）／`mid`（中途） | 必須（初期値あり） | 新卒 | 1 |
 | `background` | 現職（中途）／学部・専攻（新卒） | 自由入力 1 行、最大 100 文字 | 任意 | 空 | 1 |
 | `level` | 面接官レベル | `kind`（やさしめ）／`strict`（厳しめ）／`harsh`（圧迫） | 必須（初期値あり） | やさしめ | 1 |
-| `stage` | 面接の段階 | `first`／`second`／`final` | 任意 | 一次 | 3 |
-| `company` | 企業の規模・タイプ | `large`／`sme`／`startup`／`public` | 任意 | 大手 | 3 |
+| `stage` | 面接の段階 | `first`／`second`／`final` | 任意 | 一次 | 3（実装済み #22） |
+| `company` | 企業の規模・タイプ | `large`／`sme`／`startup`／`public` | 任意 | 大手 | 3（実装済み #22） |
 
 - `background` のラベルは `career` に連動して切り替える（新卒：「学部・専攻」、中途：「現職（業界・職種・年数）」）。空でも開始できる。欄の下に「入力すると質問が具体的になります」と表示する。
 - 「その他」を選んだ場合の自由入力は第 1 段階では **行わない**（「その他」という値のままプロンプトに渡す）。
@@ -85,7 +85,7 @@
 
 | ID | 要件 | 対応要求 | 状態 |
 | --- | --- | --- | --- |
-| FR-T01 | 3 章の面接条件を入力できる（第 1 段階は `industry` `job` `career` `background` `level`）。面接官レベルは選択中の説明文を添える | REQ-13, 33, 16 | 新規 |
+| FR-T01 | 3 章の面接条件を入力できる（第 1 段階は `industry` `job` `career` `background` `level`、第 3 段階で `stage` `company` を追加＝#22）。面接官レベル・面接の段階・企業の規模タイプは、選択中の説明文を添える | REQ-13, 33, 16, 34, 35 | 変更（#22） |
 | FR-T02 | 「講評モードで練習」で `/practice`、「模擬面接を始める」で `/interview` に条件をクエリで渡して遷移する | REQ-13, 24 | 新規（模擬面接ボタンは 2） |
 | FR-T03 | 「履歴を見る」「プロフィール設定」へのリンクを持つ | REQ-18, 36 | 新規（プロフィールは 2） |
 | FR-T04 | プロフィール未登録（ES・職務経歴書・資格がすべて空）のとき「プロフィールを登録すると深掘りが具体的になります」と表示する。この案内は DB を読むので `<Suspense>` の中で待ち、**面接条件のフォームは待たずに出す**（出るまで場所は取らない） | REQ-36 | 新規（2）／Suspense は phase 2 |
@@ -290,6 +290,8 @@
 | career | text | NOT NULL | `new` / `mid` | 1 |
 | background | text | | 現職／学部・専攻 | 1 |
 | level | text | NOT NULL | `kind` / `strict` / `harsh` | 1 |
+| stage | text | | `first` / `second` / `final`（#22 より前の記録は null） | 3 |
+| company | text | | `large` / `sme` / `startup` / `public`（#22 より前の記録は null） | 3 |
 | topic | text | NOT NULL | 講評：テーマ／模擬面接：AI が選んだテーマ（最初の質問） | 済 |
 | answer_text | text | | 講評モードの回答 | 済 |
 | smile_score | integer | | 講評：送信時点／模擬面接：最終往復の平均（話している間） | 済 |

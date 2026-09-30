@@ -49,6 +49,8 @@ export async function POST(request: Request) {
         career: c.career,
         background: c.background || null,
         level: c.level,
+        stage: c.stage,
+        company: c.company,
     };
 
     // 保存する内容をモードごとに決める
