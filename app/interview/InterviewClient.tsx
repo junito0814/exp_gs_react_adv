@@ -13,6 +13,8 @@ import { describeConditions, type Conditions } from "@/lib/conditions";
 import { INTERVIEW_TURNS } from "@/lib/options";
 import type { Turn } from "@/lib/types";
 import { initialState, reducer } from "./reducer";
+import Pending from "@/app/Pending";
+import { WAITING } from "@/lib/messages";
 
 const cardClass = "p-6 bg-red-50 dark:bg-gray-700 border-l-4 border-red-500 rounded-r-lg shadow-md leading-relaxed";
 // 圧迫のときは面接官のカードを暗くして、画面の雰囲気も変える
@@ -164,11 +166,14 @@ export default function InterviewClient({ conditions }: { conditions: Conditions
     const [volume, setVolume] = useState(1);
     const [rate, setRate] = useState(1);
     const [isSpeaking, setIsSpeaking] = useState(false);
+    // 音声を作っている間（押してから音が出るまで）。停止ボタンだけ出るのを避ける
+    const [preparingAudio, setPreparingAudio] = useState(false);
     const summaryAudioRef = useRef<HTMLAudioElement | null>(null);
 
     async function speakSummary() {
-        if (isSpeaking) return;
+        if (isSpeaking || preparingAudio) return;
         setIsSpeaking(true);
+        setPreparingAudio(true);
         try {
             const res = await fetch("/api/tts", {
                 method: "POST",
@@ -181,13 +186,15 @@ export default function InterviewClient({ conditions }: { conditions: Conditions
             audio.volume = volume;
             audio.playbackRate = rate;
             summaryAudioRef.current = audio;
-            const reset = () => { setIsSpeaking(false); summaryAudioRef.current = null; };
+            const reset = () => { setIsSpeaking(false); setPreparingAudio(false); summaryAudioRef.current = null; };
             audio.onended = reset;
             audio.onerror = reset;
             await audio.play();
+            setPreparingAudio(false); // 音が出たら準備中の表示を消す
         } catch (e) {
             console.error(e);
             setIsSpeaking(false);
+            setPreparingAudio(false);
             summaryAudioRef.current = null;
         }
     }
@@ -357,9 +364,9 @@ export default function InterviewClient({ conditions }: { conditions: Conditions
                                 </button>
                             </div>
                         ) : phase === "asking" ? (
-                            <p className="text-center text-gray-600 dark:text-gray-300">質問を準備しています…</p>
+                            <Pending className="text-center">{WAITING.question}</Pending>
                         ) : phase === "summarizing" ? (
-                            <p className="text-center text-gray-600 dark:text-gray-300">総評をまとめています…</p>
+                            <Pending className="text-center">{WAITING.summary}</Pending>
                         ) : phase !== "done" ? (
                             <div className={questionCardClass}>
                                 <h2 className="font-bold mb-2">面接官</h2>
@@ -377,7 +384,7 @@ export default function InterviewClient({ conditions }: { conditions: Conditions
                                     </p>
                                 )}
                                 {phase === "transcribing" && (
-                                    <p className="text-gray-600 dark:text-gray-300">文字にしています…</p>
+                                    <Pending>{WAITING.transcribing}</Pending>
                                 )}
 
                                 {fallbackText ? (
@@ -494,11 +501,15 @@ export default function InterviewClient({ conditions }: { conditions: Conditions
                                     </div>
 
                                     <div className="flex justify-center mt-4">
-                                        <button
-                                            onClick={isSpeaking ? stopSummary : speakSummary}
-                                            className="bg-blue-500 text-white px-4 py-2 rounded cursor-pointer">
-                                            {isSpeaking ? "⏸ 停止" : "▶ 音声読み上げ"}
-                                        </button>
+                                        {preparingAudio ? (
+                                            <Pending>{WAITING.tts}</Pending>
+                                        ) : (
+                                            <button
+                                                onClick={isSpeaking ? stopSummary : speakSummary}
+                                                className="bg-blue-500 text-white px-4 py-2 rounded cursor-pointer">
+                                                {isSpeaking ? "⏸ 停止" : "▶ 音声読み上げ"}
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
 

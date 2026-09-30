@@ -2,10 +2,15 @@
 // src/app/FaceMeter.tsx
 
 import { useEffect, useRef, useState } from "react";
+import Pending from "@/app/Pending";
+import { WAITING } from "@/lib/messages";
 
 export default function FaceMeter({ onScore }: { onScore: (n: number) => void }) {
     const videoRef = useRef<HTMLVideoElement>(null);
     const [smile, setSmile] = useState(0);
+    // モデルの読み込みとカメラ起動には数秒かかる。その間は映像が黒いままなので、
+    // 準備中であることを出し、笑顔率も出さない（「笑顔 0%」を測れたように見せない）
+    const [status, setStatus] = useState<"loading" | "ready" | "failed">("loading");
 
     useEffect(() => {
         let timer: ReturnType<typeof setInterval>;
@@ -37,8 +42,11 @@ export default function FaceMeter({ onScore }: { onScore: (n: number) => void })
             } catch (e) {
                 console.error(e);
                 alert("カメラを使えませんでした。ブラウザのアドレスバーでカメラを『許可』してから、ページを再読み込みしてください。");
+                setStatus("failed");
                 return;
             }
+
+            setStatus("ready");
 
             // ④ 0.5秒ごとに表情を測る
             timer = setInterval(async () => {
@@ -66,13 +74,29 @@ export default function FaceMeter({ onScore }: { onScore: (n: number) => void })
 
     return (
         <div>
-            <video
-                ref={videoRef} autoPlay muted playsInline
-                width={320} height={240}
-                className="bock mx-auto"/>
-            <p>
-                {smile >= 70 ? "🤩" : smile >= 40 ? "🙂" : "😑"} 笑顔 {smile}%
-            </p>
+            {/* 枠の大きさは準備中も同じ（表示が出たときに画面が動かないように） */}
+            <div className="relative mx-auto w-80 h-60">
+                <video
+                    ref={videoRef} autoPlay muted playsInline
+                    width={320} height={240}
+                    // 準備できるまで映像は隠す。要素は残す（srcObject を入れる先が必要）
+                    className={`absolute inset-0 w-full h-full object-cover rounded
+                        ${status === "ready" ? "opacity-100" : "opacity-0"}`} />
+                {status !== "ready" && (
+                    <div className="absolute inset-0 flex items-center justify-center
+                        rounded bg-gray-100 dark:bg-gray-700">
+                        {status === "loading"
+                            ? <Pending>{WAITING.camera}</Pending>
+                            : <p className="text-gray-600 dark:text-gray-300">{WAITING.cameraFailed}</p>}
+                    </div>
+                )}
+            </div>
+            {/* 測れていないうちは数字を出さない */}
+            {status === "ready" && (
+                <p>
+                    {smile >= 70 ? "🤩" : smile >= 40 ? "🙂" : "😑"} 笑顔 {smile}%
+                </p>
+            )}
         </div>
     );
 }
