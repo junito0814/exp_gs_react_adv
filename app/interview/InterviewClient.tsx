@@ -14,7 +14,7 @@ import { INTERVIEW_TURNS } from "@/lib/options";
 import type { Turn } from "@/lib/types";
 import { initialState, reducer } from "./reducer";
 import Pending from "@/app/Pending";
-import { WAITING } from "@/lib/messages";
+import { PRACTICE_SEND_NOTICE, WAITING } from "@/lib/messages";
 
 const cardClass = "p-6 bg-red-50 dark:bg-gray-700 border-l-4 border-red-500 rounded-r-lg shadow-md leading-relaxed";
 // 圧迫のときは面接官のカードを暗くして、画面の雰囲気も変える
@@ -338,6 +338,7 @@ export default function InterviewClient({ conditions }: { conditions: Conditions
                                 <li>質問が読み終わると、自動で録音が始まります。</li>
                                 <li>話し終えたら「話し終わり」を押してください。送信後のやり直しはできません。</li>
                                 <li>カメラとマイクの許可が必要です。</li>
+                                <li>{PRACTICE_SEND_NOTICE}</li>
                             </ul>
                         </div>
                         <div className="flex flex-col items-center gap-2">
