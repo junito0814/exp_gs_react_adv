@@ -12,10 +12,13 @@ import type { HistoryRow } from "@/lib/types";
 const THIS_YEAR = new Date().getFullYear();
 const inputClass = "ring-2 ring-gray-300 dark:ring-gray-600 rounded p-2 bg-white dark:bg-gray-700";
 
+// AI に送られることの注意書き。画面の冒頭で 1 回だけ出す。
+// 以前は 3 セクションの直下に同じ文を出していたが、同じ文章が 3 回並んで読み飛ばされるため
+// 「すべて任意です」の下に移した（入力欄より前に読める位置なので目的は満たせる）
 function Notice() {
     return (
         <p className="text-sm text-amber-800 dark:text-amber-200 bg-amber-50 dark:bg-amber-900/30
-            border border-amber-300 dark:border-amber-700 rounded p-3 leading-relaxed">
+            border border-amber-300 dark:border-amber-700 rounded p-3 leading-relaxed text-left">
             ⚠ {AI_SEND_NOTICE}
         </p>
     );
@@ -71,6 +74,8 @@ export default function ProfileForm({ initial }: { initial: Profile }) {
 
     return (
         <div className="flex flex-col gap-6 text-left">
+            <Notice />
+
             <Section title="ES（エントリーシート）" desc="ガクチカ・自己PR・志望動機の骨子など">
                 <textarea
                     value={es} onChange={(e) => setEs(e.target.value)}
@@ -81,7 +86,6 @@ export default function ProfileForm({ initial }: { initial: Profile }) {
                 <p className="text-sm text-right text-gray-500 dark:text-gray-400">
                     残り {ES_MAX - es.length} 文字
                 </p>
-                <Notice />
             </Section>
 
             <Section
@@ -141,7 +145,6 @@ export default function ProfileForm({ initial }: { initial: Profile }) {
                         {history.length} / {HISTORY_MAX_ROWS} 行
                     </span>
                 </div>
-                <Notice />
             </Section>
 
             <Section title="免許・資格">
@@ -154,7 +157,6 @@ export default function ProfileForm({ initial }: { initial: Profile }) {
                 <p className="text-sm text-right text-gray-500 dark:text-gray-400">
                     残り {QUALIFICATIONS_MAX - qualifications.length} 文字
                 </p>
-                <Notice />
             </Section>
 
             <div className="flex flex-col items-center gap-2 mt-2">
