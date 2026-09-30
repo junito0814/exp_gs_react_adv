@@ -8,11 +8,11 @@
 | --- | --- | --- | --- |
 | T-901 | `alert` / `confirm` を UI コンポーネントに置き換える（ローディング phase 1 では置き換えず、表示の追加だけ行う） | ダークモードで見た目が浮く | [ ] |
 | T-902 | 講評モードの保存ボタン連打防止・保存中表示 → **実装済み**（`PracticeClient` の `saving`。2026-09-30 のローディング監査で確認） | 二重保存 | [x] |
-| T-903 | `FaceMeter` の `useEffect` 依存配列に関する ESLint 警告の解消 | `onScore` の扱い | [ ] |
+| T-903 | `FaceMeter` の `useEffect` 依存配列に関する ESLint 警告の解消 → **完了**（`onScore` を ref 経由にした。依存は空のままでよく、親がインライン関数を渡してもカメラが再起動しない） | `onScore` の扱い | [x] |
 | T-904 | `test/opencollection.yml` を新しいエンドポイント（`/api/interview` など）に合わせて更新 | API の手動確認用 | [ ] |
 | T-905 | 笑顔スコアの時系列記録（旧 REQ-28） | 要求 6 章「将来の候補」 | [ ] |
 | T-906 | 面接条件のプリセット複数保存 | 要求 6 章「将来の候補」 | [ ] |
 | T-907 | 笑顔以外の表情指標 | 要求 6 章「将来の候補」 | [ ] |
 | T-908 | `proxy.ts` の `createRouteMatcher` が Clerk の次のメジャーで削除される（起動時に DEPRECATION WARNING） | ログに毎回出る | [ ] |
-| T-909 | T-903（FaceMeter の警告）を直したら CI の lint を `--max-warnings=0` にして警告も落とす | CI で警告が見逃される | [ ] |
+| T-909 | T-903（FaceMeter の警告）を直したら CI の lint を `--max-warnings=0` にして警告も落とす → **完了**（`npm run lint` に統一し、手元と CI で同じ条件にした） | CI で警告が見逃される | [x] |
 | T-910 | 回答までの時間（`thinkingSeconds`）を履歴の詳細にも表示する | いまは総評の文章にしか出ない | [ ] |

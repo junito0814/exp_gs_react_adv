@@ -1,5 +1,5 @@
 "use client";
-// src/app/FaceMeter.tsx
+// app/FaceMeter.tsx — カメラ映像から笑顔率を測る（映像はブラウザの外へ出さない）
 
 import { useEffect, useRef, useState } from "react";
 import Pending from "@/app/Pending";
@@ -7,6 +7,15 @@ import { WAITING } from "@/lib/messages";
 
 export default function FaceMeter({ onScore }: { onScore: (n: number) => void }) {
     const videoRef = useRef<HTMLVideoElement>(null);
+    // 親から渡された関数は ref 経由で呼ぶ。
+    // カメラを起動する useEffect の依存に onScore を入れると、
+    // 関数が変わるたびにカメラが止まって再起動してしまう。
+    // 依存は空のままにし、渡された関数だけを差し替える（T-903）
+    const onScoreRef = useRef(onScore);
+    // ref の書き換えは描画中にはできないので effect で行う
+    useEffect(() => {
+        onScoreRef.current = onScore;
+    }, [onScore]);
     const [smile, setSmile] = useState(0);
     // モデルの読み込みとカメラ起動には数秒かかる。その間は映像が黒いままなので、
     // 準備中であることを出し、笑顔率も出さない（「笑顔 0%」を測れたように見せない）
@@ -57,7 +66,7 @@ export default function FaceMeter({ onScore }: { onScore: (n: number) => void })
                 if (result) {
                     const happy = Math.round(result.expressions.happy * 100);
                     setSmile(happy);
-                    onScore(happy); // 親(page.tsx)にも笑顔率を渡す
+                    onScoreRef.current(happy); // 親にも笑顔率を渡す
                 }
             }, 500);
         }
@@ -69,7 +78,8 @@ export default function FaceMeter({ onScore }: { onScore: (n: number) => void })
             clearInterval(timer);
             stream?.getTracks().forEach((t) => t.stop()); // ★カメラを止める（ランプが消える）
         };
-        // onScore は常に setSmileScore を渡す（インライン関数にすると毎回カメラが再起動するので注意）
+        // 依存は空でよい：onScore は ref 経由で呼ぶので、
+        // 親がインライン関数を渡してもカメラは再起動しない
     }, []);
 
     return (

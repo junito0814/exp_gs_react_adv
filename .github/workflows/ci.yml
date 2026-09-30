@@ -48,9 +48,10 @@ jobs:
       - name: Type check
         run: npx tsc --noEmit
 
-      # app/FaceMeter.tsx に既知の警告が 1 件ある（T-903）。解消したら --max-warnings=0 にする
+      # 警告も落とす（T-903 を解消して警告 0 件にしたため）。
+      # 新しい警告を出したらこの段で気づける
       - name: Lint
-        run: npx eslint
+        run: npm run lint
 
       - name: Build
         run: npm run build
