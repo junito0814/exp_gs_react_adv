@@ -1,7 +1,11 @@
-// app/page.tsx — トップ画面（面接条件を選んで練習へ）
+// app/(home)/page.tsx — トップ画面（面接条件を選んで練習へ）
+//
+// ルートグループ `(home)` に入れているのは loading.tsx の範囲を `/` だけに閉じるため。
+// app/loading.tsx は下位のすべてのページ（/interview /practice /sign-in …）の
+// fallback にもなるので、トップの骨組みが別の画面でも出てしまう。URL は `/` のまま。
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import ConditionForm from "./ConditionForm";
+import ConditionForm from "../ConditionForm";
 import { requireUserId } from "@/lib/auth";
 import { isProfileEmpty } from "@/lib/profile";
 import { getProfile } from "@/lib/profile-db";

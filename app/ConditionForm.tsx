@@ -2,7 +2,7 @@
 // app/ConditionForm.tsx
 // トップ画面の面接条件フォーム。選んだ条件は URL クエリで /practice /interview に渡す
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
     INDUSTRIES, JOBS, CAREERS, LEVELS,
@@ -10,6 +10,7 @@ import {
     INTERVIEW_TURNS, descriptionOf,
 } from "@/lib/options";
 import { DEFAULT_CONDITIONS, toQuery, type Conditions } from "@/lib/conditions";
+import { WAITING } from "@/lib/messages";
 
 const selectClass =
     "w-full max-w-md ring-2 ring-gray-300 dark:ring-gray-600 rounded p-2 bg-white dark:bg-gray-700 cursor-pointer";
@@ -17,6 +18,14 @@ const selectClass =
 export default function ConditionForm({ initial }: { initial?: Conditions }) {
     const router = useRouter();
     const [c, setC] = useState<Conditions>(initial ?? DEFAULT_CONDITIONS);
+    // 押してから練習画面が出るまでの間。どちらを押したか分かるように行き先も持つ
+    const [moving, startTransition] = useTransition();
+    const [movingTo, setMovingTo] = useState<"interview" | "practice" | null>(null);
+    const go = (to: "interview" | "practice") => {
+        if (moving) return;
+        setMovingTo(to);
+        startTransition(() => router.push(`/${to}?${toQuery(c)}`));
+    };
     const update = <K extends keyof Conditions>(key: K, value: Conditions[K]) =>
         setC((prev) => ({ ...prev, [key]: value }));
 
@@ -82,9 +91,12 @@ export default function ConditionForm({ initial }: { initial?: Conditions }) {
                 <div className="flex flex-col items-center gap-2">
                     <button
                         type="button"
-                        onClick={() => router.push(`/interview?${toQuery(c)}`)}
-                        className="bg-red-400 text-white px-6 py-3 rounded hover:bg-red-500 transition duration-300 transform hover:scale-105 cursor-pointer">
-                        🎤 模擬面接を始める
+                        onClick={() => go("interview")}
+                        disabled={moving}
+                        className="bg-red-400 text-white px-6 py-3 rounded hover:bg-red-500 transition duration-300
+                            transform hover:scale-105 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed
+                            disabled:transform-none">
+                        {movingTo === "interview" ? WAITING.moving : "🎤 模擬面接を始める"}
                     </button>
                     <span className="text-xs text-gray-500 dark:text-gray-400 text-center max-w-[15rem]">
                         面接官が出題し、回答を深掘りします（{INTERVIEW_TURNS} 往復・録音のみ）
@@ -93,9 +105,11 @@ export default function ConditionForm({ initial }: { initial?: Conditions }) {
                 <div className="flex flex-col items-center gap-2">
                     <button
                         type="button"
-                        onClick={() => router.push(`/practice?${toQuery(c)}`)}
-                        className="px-6 py-3 rounded border border-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition duration-300 cursor-pointer">
-                        ✎ 講評モードで練習
+                        onClick={() => go("practice")}
+                        disabled={moving}
+                        className="px-6 py-3 rounded border border-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700
+                            transition duration-300 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
+                        {movingTo === "practice" ? WAITING.moving : "✎ 講評モードで練習"}
                     </button>
                     <span className="text-xs text-gray-500 dark:text-gray-400 text-center max-w-[15rem]">
                         テーマを自分で選んで 1 問だけ講評をもらいます
