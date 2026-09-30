@@ -318,7 +318,7 @@
 | NFR-07 | UI | ダークモード対応（既存の配色を踏襲）。PC 幅を前提とし、スマートフォン最適化は行わない |
 | NFR-12 | UI | 1 秒以上かかる操作は進行中であることを表示し、完了までその操作を再実行できないようにする（ボタンは `disabled`）。表示はその操作の近くに出し、画面全体を覆わない。対象と優先度は 決定 33 と [04_tasks/04_loading](./04_tasks/04_loading/README.md) |
 | NFR-08 | 保守性 | TypeScript / ESLint に準拠。選択肢・プロンプトは `lib/` に切り出し、画面と API で共有 |
-| NFR-10 | 保守性 | PR と `main` への push で CI（型チェック・lint・本番ビルド）が自動実行される。CI ではキーをダミー値にし、本物のキーは GitHub に置かない |
+| NFR-10 | 保守性 | PR と `main` への push で CI（型チェック・lint・本番ビルド）が自動実行される。lint は警告も許さない（`--max-warnings=0`）。CI ではキーをダミー値にし、本物のキーは GitHub に置かない |
 | NFR-11 | 運用 | デプロイは Vercel の GitHub 連携（`main` で本番、PR で Preview）。DB のマイグレーションは自動実行せず手動で行う（手順は `docs/deployment.md`） |
 | NFR-09 | 環境 | Node.js 20 以上、Next.js 16 の規約（`params` `searchParams` は `await`、`proxy.ts` による保護）に従う。実装前に `node_modules/next/dist/docs/` を確認する |
 

@@ -108,7 +108,7 @@ http://localhost:3000 を開き、Google でログインします。**カメラ�
 | `npm run dev` | 開発サーバー |
 | `npm run build` | 本番ビルド |
 | `npm start` | ビルド済みのものを起動 |
-| `npm run lint` | ESLint |
+| `npm run lint` | ESLint（警告が 1 件でもあれば失敗する。CI と同じ条件） |
 | `npm run db:generate` | スキーマから SQL を生成（記録用） |
 | `npm run db:push` | スキーマを DB に適用 |
 
