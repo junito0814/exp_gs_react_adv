@@ -43,10 +43,12 @@ export const LEVELS = [
 ] as const satisfies readonly Option[];
 export type LevelKey = (typeof LEVELS)[number]["key"];
 
-// 面接の段階。同じ志望先でも、一次と最終では聞かれることが変わる（US-24）
+// 面接の段階。同じ志望先でも、一次と最終では聞かれることが変わる（US-24）。
+// 「回数」ではなく役割で 3 つに分ける。三次・四次がある選考でも、
+// 中間の面接は役割としては「深掘り」なので second にまとめる（キーは変えない）
 export const STAGES = [
-    { key: "first", label: "一次", description: "人物と基本を広く確認します（自己紹介・経歴・志望動機の概要）" },
-    { key: "second", label: "二次", description: "経験を深く掘ります（役割・行動・数字の根拠）" },
+    { key: "first", label: "一次", description: "最初の面接。人物と基本を広く確認します（自己紹介・経歴・志望動機の概要）" },
+    { key: "second", label: "二次・中間", description: "三次・四次など、最終の前の面接はここ。経験を深く掘ります（役割・行動・数字の根拠）" },
     { key: "final", label: "最終", description: "志望度と入社後を問います（なぜ当社か・入社後にどうしたいか）" },
 ] as const satisfies readonly Option[];
 export type StageKey = (typeof STAGES)[number]["key"];
