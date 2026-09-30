@@ -43,6 +43,23 @@ export const LEVELS = [
 ] as const satisfies readonly Option[];
 export type LevelKey = (typeof LEVELS)[number]["key"];
 
+// 面接の段階。同じ志望先でも、一次と最終では聞かれることが変わる（US-24）
+export const STAGES = [
+    { key: "first", label: "一次", description: "人物と基本を広く確認します（自己紹介・経歴・志望動機の概要）" },
+    { key: "second", label: "二次", description: "経験を深く掘ります（役割・行動・数字の根拠）" },
+    { key: "final", label: "最終", description: "志望度と入社後を問います（なぜ当社か・入社後にどうしたいか）" },
+] as const satisfies readonly Option[];
+export type StageKey = (typeof STAGES)[number]["key"];
+
+// 企業の規模・タイプ。志望動機の突き方が変わる
+export const COMPANIES = [
+    { key: "large", label: "大手", description: "規模・制度・組織の中での立ち回りを問われます" },
+    { key: "sme", label: "中小", description: "裁量の広さと、一人で複数の役割を担えるかを問われます" },
+    { key: "startup", label: "ベンチャー", description: "変化への適応と自走できるかを問われます" },
+    { key: "public", label: "公的機関", description: "公共性・公平性と、なぜ民間でないのかを問われます" },
+] as const satisfies readonly Option[];
+export type CompanyKey = (typeof COMPANIES)[number]["key"];
+
 // 講評モードの定番テーマ（区分で切り替える）。新卒に「転職理由」は出さない
 export const TOPICS_BY_CAREER: Record<CareerKey, readonly string[]> = {
     new: ["自己紹介", "ガクチカ", "自己PR", "志望動機", "長所・短所", "挫折経験"],

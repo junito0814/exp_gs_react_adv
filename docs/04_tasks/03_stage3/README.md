@@ -7,7 +7,7 @@
 
 | # | 機能 | ファイル | 目安 | 状態 |
 | --- | --- | --- | --- | --- |
-| 1 | 面接の段階・企業タイプ | [01_stage_and_company.md](./01_stage_and_company.md) | 半日 | [ ] |
+| 1 | 面接の段階・企業タイプ | [01_stage_and_company.md](./01_stage_and_company.md) | 半日 | [x] |
 | 2 | ~~考える時間~~ → 取り下げ | [02_thinking_time.md](./02_thinking_time.md) | - | 取り下げ |
 | 3 | 短い回答への促し | [03_short_answer_prompt.md](./03_short_answer_prompt.md) | 半日 | [ ] |
 | 4 | 前回条件の記憶 | [04_remember_conditions.md](./04_remember_conditions.md) | 半日 | [ ] |

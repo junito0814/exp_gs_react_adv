@@ -1,6 +1,10 @@
 // lib/prompts.ts
 // AI に渡すプロンプト。講評（/api/coach）と模擬面接（/api/interview）で共通の system プロンプトをここで組み立てる。
-import { INDUSTRIES, JOBS, CAREERS, LEVELS, BACKGROUND_LABEL, INTERVIEW_TURNS, labelOf, type LevelKey, type CareerKey } from "./options";
+import {
+    INDUSTRIES, JOBS, CAREERS, LEVELS, STAGES, COMPANIES,
+    BACKGROUND_LABEL, INTERVIEW_TURNS, labelOf,
+    type LevelKey, type CareerKey, type StageKey, type CompanyKey,
+} from "./options";
 import type { Conditions } from "./conditions";
 
 // 面接官レベルごとの振る舞い（要件定義 5.1）
@@ -33,6 +37,21 @@ export const PROHIBITED = `【禁止事項（必ず守る）】
 - 回答者が上記に自ら触れた場合も、そこを深掘りせず話題を戻す。`;
 
 // 区分による出題・評価の傾向
+// 面接の段階ごとの出題傾向（US-24）。同じ志望先でも一次と最終では聞くことが変わる
+export const STAGE_TENDENCY: Record<StageKey, string> = {
+    first: `一次面接。人物と基本を広く確認する段階。自己紹介・これまでの経験の概要・志望動機の輪郭を扱い、深掘りは 1 段階までにとどめる。入社後の配属や待遇の話には踏み込まない。`,
+    second: `二次面接（現場の面接）。経験を深く掘る段階。「そのときのあなたの役割は何か」「なぜその方法を選んだのか」「結果を数字で言えるか」を必ず問い、抽象的な回答は具体化させる。`,
+    final: `最終面接（役員面接）。志望度と入社後を確かめる段階。「なぜ同業他社ではなく当社なのか」「入社後どのように貢献し、何を目指すのか」を必ず扱う。細かい業務スキルの確認より、覚悟・価値観・長期の展望を重視する。`,
+};
+
+// 企業の規模・タイプごとの、志望動機の突き方（US-24）
+export const COMPANY_TENDENCY: Record<CompanyKey, string> = {
+    large: `志望先は大手。組織の規模・制度・分業が前提。「大きな組織の中でどう動くか」「異動や希望通りでない配属も受け入れられるか」「なぜ大手なのか」を志望動機の確認に含める。`,
+    sme: `志望先は中小企業。一人が複数の役割を担う前提。「担当外の仕事も引き受けられるか」「なぜ大手ではなく当社規模なのか」を志望動機の確認に含める。`,
+    startup: `志望先はベンチャー。事業も体制も変わる前提。「変化や不確実さに耐えられるか」「指示待ちにならず自分で決めて動けるか」「なぜ安定より成長環境を選ぶのか」を志望動機の確認に含める。`,
+    public: `志望先は公的機関。公共性・公平性が前提。「特定の人に有利にしない判断ができるか」「なぜ民間ではないのか」「地域や社会にどう関わりたいか」を志望動機の確認に含める。利益や成長より、継続性と公平性を重んじる観点で評価する。`,
+};
+
 export const CAREER_TENDENCY: Record<CareerKey, string> = {
     new: `回答者は新卒（学生）。学生時代の経験（学業・サークル・アルバイト・インターン）、志望動機、人柄・価値観を中心に扱う。「転職理由」「前職」など社会人経験を前提にした話題は出さない。`,
     mid: `回答者は中途（社会人）。これまでの実績（できれば数字）、転職理由、その経験が志望先でどう再現できるかを中心に扱う。`,
@@ -44,6 +63,8 @@ function describeForPrompt(c: Conditions): string {
         `- 志望業界：${labelOf(INDUSTRIES, c.industry)}`,
         `- 志望職種：${labelOf(JOBS, c.job)}`,
         `- 区分：${labelOf(CAREERS, c.career)}`,
+        `- 面接の段階：${labelOf(STAGES, c.stage)}`,
+        `- 企業の規模・タイプ：${labelOf(COMPANIES, c.company)}`,
         `- 面接官レベル：${labelOf(LEVELS, c.level)}`,
     ];
     if (c.background) lines.push(`- ${BACKGROUND_LABEL[c.career]}：${c.background}`);
@@ -57,6 +78,8 @@ export function buildSystemPrompt(c: Conditions, profileText?: string | null): s
         `【回答者の条件】\n${describeForPrompt(c)}`,
         `【面接官の振る舞い】\n${LEVEL_BEHAVIOR[c.level]}`,
         `【出題・評価の傾向】\n${CAREER_TENDENCY[c.career]}`,
+        `【この面接の段階】\n${STAGE_TENDENCY[c.stage]}`,
+        `【志望先のタイプ】\n${COMPANY_TENDENCY[c.company]}`,
     ];
     if (c.background) {
         parts.push(
@@ -145,6 +168,7 @@ export function buildFirstQuestionPrompt(c: Conditions, topic: string): string {
     return `この面接のテーマは「${topic}」です。このテーマについて最初の質問をしてください。
 - 志望業界（${labelOf(INDUSTRIES, c.industry)}）・志望職種（${labelOf(JOBS, c.job)}）${c.background ? `・${BACKGROUND_LABEL[c.career]}（${c.background}）` : ""}に合わせた聞き方にしてください。
 - これから ${INTERVIEW_TURNS} 往復の面接を行うため、1 問目は答えやすい入口となる質問にしてください。
+- ${labelOf(STAGES, c.stage)}面接であることを踏まえた聞き方にしてください${c.stage === "final" ? "（志望度・入社後の展望に触れる）" : ""}。
 - 質問文に「テーマ」という言葉は使わないでください。`;
 }
 

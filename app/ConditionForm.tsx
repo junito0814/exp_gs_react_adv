@@ -5,7 +5,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
-    INDUSTRIES, JOBS, CAREERS, LEVELS,
+    INDUSTRIES, JOBS, CAREERS, LEVELS, STAGES, COMPANIES,
     BACKGROUND_LABEL, BACKGROUND_PLACEHOLDER, BACKGROUND_MAX,
     INTERVIEW_TURNS, descriptionOf,
 } from "@/lib/options";
@@ -70,6 +70,29 @@ export default function ConditionForm({ initial }: { initial?: Conditions }) {
                         onChange={(e) => update("background", e.target.value)} />
                     <span className="text-xs text-gray-500 dark:text-gray-400">
                         入力すると質問が具体的になります（{c.background.length}/{BACKGROUND_MAX}）
+                    </span>
+                </label>
+
+                {/* 何の面接か（段階と志望先のタイプ）。出題の傾向と志望動機の突き方が変わる */}
+                <label className="flex flex-col gap-1">
+                    <span className="text-sm">面接の段階</span>
+                    <select className={selectClass} value={c.stage}
+                        onChange={(e) => update("stage", e.target.value as Conditions["stage"])}>
+                        {STAGES.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
+                    </select>
+                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                        {descriptionOf(STAGES, c.stage)}
+                    </span>
+                </label>
+
+                <label className="flex flex-col gap-1">
+                    <span className="text-sm">企業の規模・タイプ</span>
+                    <select className={selectClass} value={c.company}
+                        onChange={(e) => update("company", e.target.value as Conditions["company"])}>
+                        {COMPANIES.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
+                    </select>
+                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                        {descriptionOf(COMPANIES, c.company)}
                     </span>
                 </label>
 

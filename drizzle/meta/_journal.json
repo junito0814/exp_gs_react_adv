@@ -22,6 +22,13 @@
       "when": 1790313482213,
       "tag": "0002_turns_profiles",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1790752135060,
+      "tag": "0003_sessions_stage_company",
+      "breakpoints": true
     }
   ]
 }

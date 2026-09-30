@@ -12,6 +12,9 @@ export const sessions = pgTable("sessions", {
     career: text("career").notNull(),           // "new" / "mid"
     background: text("background"),             // 現職（中途）/ 学部・専攻（新卒）
     level: text("level").notNull(),             // 面接官レベル "kind" / "strict" / "harsh"
+    // 第 3 段階で追加（#22）。これより前の記録は null なので nullable にする
+    stage: text("stage"),                       // 面接の段階 "first" / "second" / "final"
+    company: text("company"),                   // 企業の規模・タイプ "large" / "sme" / "startup" / "public"
     topic: text("topic").notNull(),             // お題（講評）/ 最初の質問（模擬面接）
     answerText: text("answer_text"),            // 回答（講評モード）
     smileScore: integer("smile_score"),         // 笑顔スコア（送信時点。模擬面接は最終往復）
