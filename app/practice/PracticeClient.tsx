@@ -9,7 +9,7 @@ import { TOPICS_BY_CAREER, TOPIC_MAX } from "@/lib/options";
 import { describeConditions, type Conditions } from "@/lib/conditions";
 import Pending from "@/app/Pending";
 import { SkeletonBox, SkeletonLines } from "@/app/Skeleton";
-import { WAITING } from "@/lib/messages";
+import { PRACTICE_SEND_NOTICE, WAITING } from "@/lib/messages";
 
 const FREE_TOPIC = "__free__"; // プルダウンの「自由入力」を表す値
 
@@ -176,7 +176,11 @@ export default function PracticeClient({ conditions }: { conditions: Conditions 
           <Link href="/history" className="text-red-400 hover:underline">一覧へ →</Link>
         </div>
         <h1 className="font-serif text-4xl p-3 mt-6 mb-2">講評モード</h1>
-        <p className="text-gray-600 dark:text-gray-300 mb-6">{describeConditions(conditions)}</p>
+        <p className="text-gray-600 dark:text-gray-300 mb-2">{describeConditions(conditions)}</p>
+        {/* 録音より前に読める位置に置く（NFR-04 / FR-P17） */}
+        <p className="max-w-xl mx-auto mb-6 text-sm text-left text-gray-500 dark:text-gray-400">
+          {PRACTICE_SEND_NOTICE}
+        </p>
 
         <FaceMeter
           onScore={setSmileScore} />
