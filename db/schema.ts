@@ -8,7 +8,10 @@ export const sessions = pgTable("sessions", {
     mode: text("mode").notNull(),               // "practice"（講評）/ "interview"（模擬面接）
     // 面接条件（lib/options.ts のキー）
     industry: text("industry").notNull(),       // 志望業界
+    // 「その他」を選んだときの自由入力（#29）。それ以外は null
+    industryOther: text("industry_other"),      // 例：不動産
     job: text("job").notNull(),                 // 志望職種
+    jobOther: text("job_other"),                // 例：人事
     career: text("career").notNull(),           // "new" / "mid"
     background: text("background"),             // 現職（中途）/ 学部・専攻（新卒）
     level: text("level").notNull(),             // 面接官レベル "kind" / "strict" / "harsh"

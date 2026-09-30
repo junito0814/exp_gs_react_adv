@@ -1,11 +1,11 @@
 // lib/prompts.ts
 // AI に渡すプロンプト。講評（/api/coach）と模擬面接（/api/interview）で共通の system プロンプトをここで組み立てる。
 import {
-    INDUSTRIES, JOBS, CAREERS, LEVELS, STAGES, COMPANIES,
+    CAREERS, LEVELS, STAGES, COMPANIES,
     BACKGROUND_LABEL, INTERVIEW_TURNS, labelOf,
     type LevelKey, type CareerKey, type StageKey, type CompanyKey,
 } from "./options";
-import type { Conditions } from "./conditions";
+import { industryLabel, jobLabel, type Conditions } from "./conditions";
 
 // 面接官レベルごとの振る舞い（要件定義 5.1）
 export const LEVEL_BEHAVIOR: Record<LevelKey, string> = {
@@ -60,8 +60,8 @@ export const CAREER_TENDENCY: Record<CareerKey, string> = {
 // 条件の説明文
 function describeForPrompt(c: Conditions): string {
     const lines = [
-        `- 志望業界：${labelOf(INDUSTRIES, c.industry)}`,
-        `- 志望職種：${labelOf(JOBS, c.job)}`,
+        `- 志望業界：${industryLabel(c)}`,
+        `- 志望職種：${jobLabel(c)}`,
         `- 区分：${labelOf(CAREERS, c.career)}`,
         `- 面接の段階：${labelOf(STAGES, c.stage)}`,
         `- 企業の規模・タイプ：${labelOf(COMPANIES, c.company)}`,
@@ -84,8 +84,8 @@ export function buildSystemPrompt(c: Conditions, profileText?: string | null): s
     if (c.background) {
         parts.push(
             c.career === "mid"
-                ? `【現状と志望先の差分】\n現職（${c.background}）から志望先（${labelOf(INDUSTRIES, c.industry)}・${labelOf(JOBS, c.job)}）への転職理由や、現職の経験が志望先でどう活きるかを、必ず 1 度は問う・または評価に含める。`
-                : `【現状と志望先の差分】\n学部・専攻（${c.background}）と志望先（${labelOf(INDUSTRIES, c.industry)}・${labelOf(JOBS, c.job)}）のつながり（なぜその分野から志望するのか）を、必ず 1 度は問う・または評価に含める。`,
+                ? `【現状と志望先の差分】\n現職（${c.background}）から志望先（${industryLabel(c)}・${jobLabel(c)}）への転職理由や、現職の経験が志望先でどう活きるかを、必ず 1 度は問う・または評価に含める。`
+                : `【現状と志望先の差分】\n学部・専攻（${c.background}）と志望先（${industryLabel(c)}・${jobLabel(c)}）のつながり（なぜその分野から志望するのか）を、必ず 1 度は問う・または評価に含める。`,
         );
     }
     if (profileText && profileText.trim()) {
@@ -166,7 +166,7 @@ ${lengthRule}
 // テーマは AI に選ばせると偏るため、サーバー側（pickTopic）で決めて渡す
 export function buildFirstQuestionPrompt(c: Conditions, topic: string): string {
     return `この面接のテーマは「${topic}」です。このテーマについて最初の質問をしてください。
-- 志望業界（${labelOf(INDUSTRIES, c.industry)}）・志望職種（${labelOf(JOBS, c.job)}）${c.background ? `・${BACKGROUND_LABEL[c.career]}（${c.background}）` : ""}に合わせた聞き方にしてください。
+- 志望業界（${industryLabel(c)}）・志望職種（${jobLabel(c)}）${c.background ? `・${BACKGROUND_LABEL[c.career]}（${c.background}）` : ""}に合わせた聞き方にしてください。
 - これから ${INTERVIEW_TURNS} 往復の面接を行うため、1 問目は答えやすい入口となる質問にしてください。
 - ${labelOf(STAGES, c.stage)}面接であることを踏まえた聞き方にしてください${c.stage === "final" ? "（志望度・入社後の展望に触れる）" : ""}。
 - 質問文に「テーマ」という言葉は使わないでください。`;

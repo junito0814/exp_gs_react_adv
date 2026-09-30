@@ -79,6 +79,7 @@ export const BACKGROUND_PLACEHOLDER: Record<CareerKey, string> = {
 export const INTERVIEW_TURNS = 3;  // 模擬面接の往復数（画面表示とプロンプトで共有）
 
 export const BACKGROUND_MAX = 100; // 現職／学部の最大文字数
+export const OTHER_MAX = 50;       // 業界・職種で「その他」を選んだときの自由入力の最大文字数
 export const TOPIC_MAX = 100;      // 自由入力テーマの最大文字数
 
 // キー → 表示名。未知のキーは空文字
