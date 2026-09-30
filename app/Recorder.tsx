@@ -7,6 +7,8 @@
 //    マイクは親が保持しているものを `stream` で渡す（面接中に何度も許可を求めないため）
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Pending from "@/app/Pending";
+import { WAITING } from "@/lib/messages";
 
 type Props = {
     onText: (t: string, info?: { speechStart?: number }) => void; // 文字起こし結果と、声が出るまでの秒数
@@ -28,6 +30,9 @@ export default function Recorder({
     autoStart = false,
 }: Props) {
     const [recording, setRecording] = useState(false);
+    // 文字起こしの待ち時間。手動（講評モード）ではこの間ボタンを出さない
+    // （模擬面接は親が同じ文言を出すので、こちらでは出さない）
+    const [transcribing, setTranscribing] = useState(false);
     const recorderRef = useRef<MediaRecorder | null>(null);
     const chunksRef = useRef<Blob[]>([]);
     // 自分で取得したマイクかどうか。自分のものだけ停止する（親のものは面接中使い回す）
@@ -53,6 +58,7 @@ export default function Recorder({
             const blob = new Blob(chunksRef.current, { type: "audio/webm" });
             const form = new FormData();
             form.append("audio", blob, "audio.webm");
+            setTranscribing(true);
             try {
                 const res = await fetch("/api/transcribe", { method: "POST", body: form });
                 const data = await res.json();
@@ -67,6 +73,8 @@ export default function Recorder({
             } catch {
                 alert("文字起こしに失敗しました。通信を確認してください。");
                 onError?.();
+            } finally {
+                setTranscribing(false);
             }
         };
         recorder.start();
@@ -94,10 +102,14 @@ export default function Recorder({
         onStop?.();
     }
 
-    // 自動開始のときは開始ボタンを出さない（押すのは「話し終わり」だけ）
+    // 自動開始のときは開始ボタンを出さない（押すのは「話し終わり」だけ）。
+    // 文字起こし中は親が「文字にしています…」を出すので、ここでは何も出さない
     if (autoStart && !recording) {
-        return <p className="text-gray-500 dark:text-gray-400">マイクを準備しています…</p>;
+        return transcribing ? null : <Pending>{WAITING.mic}</Pending>;
     }
+
+    // 手動（講評モード）：文字起こしが終わるまで録音を始められないようにする
+    if (transcribing) return <Pending>{WAITING.transcribing}</Pending>;
 
     return (
         <button onClick={recording ? stopRec : startRec} disabled={disabled} className="disabled:opacity-50">

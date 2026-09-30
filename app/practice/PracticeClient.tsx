@@ -7,6 +7,8 @@ import Recorder from "@/app/Recorder";
 import Link from "next/link";
 import { TOPICS_BY_CAREER, TOPIC_MAX } from "@/lib/options";
 import { describeConditions, type Conditions } from "@/lib/conditions";
+import Pending from "@/app/Pending";
+import { WAITING } from "@/lib/messages";
 
 const FREE_TOPIC = "__free__"; // プルダウンの「自由入力」を表す値
 
@@ -21,6 +23,8 @@ export default function PracticeClient({ conditions }: { conditions: Conditions 
   const [feedback, setFeedback] = useState("");
   const [loading, setLoading] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  // 音声を作っている間（押してから音が出るまで）。停止ボタンだけ出るのを避ける
+  const [preparingAudio, setPreparingAudio] = useState(false);
   const [isPaused, setIsPaused] = useState(false); //再生途中で止めたか
   const [volume, setVolume] = useState(1); //音声　０〜１
   const [rate, setRate] = useState(1); //再生速度:１が標準
@@ -51,9 +55,10 @@ export default function PracticeClient({ conditions }: { conditions: Conditions 
     }
   }
     async function speak() {
-      if (isSpeaking) return; //念の為の二重ガード
+      if (isSpeaking || preparingAudio) return; //念の為の二重ガード
 
       setIsSpeaking(true); //開始時にロックして押せなくする
+      setPreparingAudio(true); //音声を作っている間の表示
       setIsPaused(false);
 
       try {
@@ -76,6 +81,7 @@ export default function PracticeClient({ conditions }: { conditions: Conditions 
         // ★再生が終わったらロック解除
         audio.onended = () => {
           setIsSpeaking(false);
+          setPreparingAudio(false);
           setIsPaused(false);
           audioRef.current = null;
         }
@@ -83,14 +89,17 @@ export default function PracticeClient({ conditions }: { conditions: Conditions 
         // ★再生自体が失敗した場合もロック解除(でないと永久に押せなくなる)
         audio.onerror = () => {
           setIsSpeaking(false);
+          setPreparingAudio(false);
           setIsPaused(false);
           audioRef.current = null;
         }
 
         await audio.play();
+        setPreparingAudio(false); // 音が出たら準備中の表示を消す
       } catch (e) {
         console.error(e);
         setIsSpeaking(false); // ★fetch失敗時などもロック解除
+        setPreparingAudio(false);
         setIsPaused(false);
         audioRef.current = null;
       }
@@ -258,7 +267,9 @@ export default function PracticeClient({ conditions }: { conditions: Conditions 
             </div>
             
             <div className="flex justify-center">
-            {isSpeaking && (
+            {preparingAudio && <Pending className="mt-8">{WAITING.tts}</Pending>}
+
+            {isSpeaking && !preparingAudio && (
                 <button
                   onClick={stopSpeaking}
                   className="mt-8 bg-blue-500 rounded">⏸ 停止</button>
