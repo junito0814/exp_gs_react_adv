@@ -3,7 +3,7 @@
 // [開始前] idle ──▶ asking（質問を取得中）──▶ answering（回答待ち）
 //                                           ├─▶ recording（録音中）──▶ transcribing（文字起こし中）──▶ answering
 //                                           └─▶ submitting（送信・次へ）──▶ asking / summarizing
-//                              summarizing（総評を生成中）──▶ done（総評表示・保存済み）
+//                              summarizing（総評を生成中）──▶ saving（保存中）──▶ done（総評表示・保存済み）
 import type { Turn } from "@/lib/types";
 
 export type Phase =
@@ -14,6 +14,7 @@ export type Phase =
     | "transcribing"  // 文字起こし中
     | "submitting"    // 回答を送って次の質問 or 総評へ
     | "summarizing"   // 総評を生成中
+    | "saving"        // 総評はできた。DB に保存している
     | "done";         // 総評を表示（保存済み）
 
 export type State = {
@@ -78,7 +79,8 @@ export function reducer(state: State, action: Action): State {
         case "summarize":
             return { ...state, phase: "summarizing", error: "" };
         case "summary":
-            return { ...state, summary: action.summary };
+            // 総評はもう出来ている。ここからは保存を待つだけなので、表示も分ける
+            return { ...state, phase: "saving", summary: action.summary };
         case "saved":
             return { ...state, phase: "done", savedId: action.id, saveError: "" };
         case "saveFailed":
