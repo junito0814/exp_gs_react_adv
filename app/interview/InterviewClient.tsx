@@ -46,6 +46,13 @@ export default function InterviewClient({ conditions }: { conditions: Conditions
     // 面接中ずっと使うマイク。「面接を始める」で 1 回だけ許可を取り、3 往復で使い回す。
     // Recorder に渡す＝描画で読むので、ref ではなく state で持つ
     const [micStream, setMicStream] = useState<MediaStream | null>(null);
+    // 「面接を始める」を押してからマイクの許可が返るまで（ここは phase では表せない）
+    const [starting, setStarting] = useState(false);
+    // 音が鳴り始めた質問。これで「音声を作っている間」と「読み上げ中」を見分ける
+    // （effect の中で同期的に state を更新しないよう、質問文そのものを持つ）
+    const [audioStartedFor, setAudioStartedFor] = useState("");
+    // 保存に失敗したあとの「再保存」中
+    const [resaving, setResaving] = useState(false);
     // 読み上げが終わった質問。これが今の質問と一致したら「話してよい」合図になる
     // （state を effect の中で false に戻す必要がないよう、質問文そのものを持つ）
     const [readyFor, setReadyFor] = useState("");
@@ -206,6 +213,7 @@ export default function InterviewClient({ conditions }: { conditions: Conditions
     // 面接の開始：先にマイクの許可を取り（ここはクリック直後なので許可が求められる）、
     // それから最初の質問を取りに行く。マイクが使えないときはテキスト回答に切り替える
     const startInterview = useCallback(async () => {
+        setStarting(true); // 許可のダイアログを待つ間、ボタンを押せなくする
         try {
             setMicStream(await navigator.mediaDevices.getUserMedia({ audio: true }));
         } catch (e) {
@@ -213,6 +221,7 @@ export default function InterviewClient({ conditions }: { conditions: Conditions
             dispatch({ type: "useTextFallback" });
         }
         await fetchQuestion([], "");
+        setStarting(false);
     }, [fetchQuestion]);
 
     // 総評を作って自動保存する（3 往復終了時・中断時）
@@ -285,12 +294,17 @@ export default function InterviewClient({ conditions }: { conditions: Conditions
                 // 読み上げ終了が「話してよい」合図。ここから録音が自動で始まる
                 audio.onended = () => { audioRef.current = null; setReadyFor(question); };
                 audio.onerror = () => { audioRef.current = null; setReadyFor(question); };
+                audio.onplay = () => setAudioStartedFor(question); // 音が鳴り始めた
                 await audio.play();
             } catch (e) {
                 // 読み上げが失敗してもテキストは出ているので、そのまま進める。
                 // ended が来ないので、質問表示から 1.5 秒後に話し始めてもらう
                 console.error("質問の読み上げに失敗:", e);
-                if (!cancelled) fallback = setTimeout(() => setReadyFor(question), 1500);
+                // 鳴らせないので「作っている間」の表示も終わらせる
+                if (!cancelled) {
+                    setAudioStartedFor(question);
+                    fallback = setTimeout(() => setReadyFor(question), 1500);
+                }
             }
         })();
         return () => { cancelled = true; if (fallback) clearTimeout(fallback); };
@@ -298,9 +312,13 @@ export default function InterviewClient({ conditions }: { conditions: Conditions
 
     // 読み上げが終わった質問と今の質問が一致したら、話してよい合図
     const readyToSpeak = question !== "" && readyFor === question;
+    // 質問は出ているが、まだ音が鳴っていない＝音声を作っている間
+    const preparingQuestion = question !== "" && !readyToSpeak && audioStartedFor !== question;
     const isHarsh = conditions.level === "harsh";
     const questionCardClass = isHarsh ? harshCardClass : cardClass;
     const started = phase !== "idle";
+    // 総評の生成・保存・表示中は面接の最中ではない（カメラも中断ボタンも出さない）
+    const interviewing = phase !== "summarizing" && phase !== "saving" && phase !== "done";
     const turnNumber = Math.min(turns.length + 1, INTERVIEW_TURNS);
 
     return (
@@ -322,13 +340,16 @@ export default function InterviewClient({ conditions }: { conditions: Conditions
                                 <li>カメラとマイクの許可が必要です。</li>
                             </ul>
                         </div>
-                        <div className="flex justify-center">
+                        <div className="flex flex-col items-center gap-2">
                             <button
                                 onClick={startInterview}
+                                disabled={starting}
                                 className="bg-red-400 text-white px-8 py-3 rounded hover:bg-red-500
-                                    transition duration-300 transform hover:scale-105 cursor-pointer">
-                                面接を始める
+                                    transition duration-300 transform hover:scale-105 cursor-pointer
+                                    disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none">
+                                {starting ? WAITING.moving : "面接を始める"}
                             </button>
+                            {starting && <Pending>{WAITING.micPermission}</Pending>}
                         </div>
                     </>
                 ) : (
@@ -339,7 +360,7 @@ export default function InterviewClient({ conditions }: { conditions: Conditions
                                 <span className="px-3 py-1 rounded-full border border-gray-400">
                                     {turnNumber} / {INTERVIEW_TURNS}
                                 </span>
-                                {phase !== "done" && (
+                                {interviewing && (
                                     <button
                                         onClick={abort}
                                         className="px-3 py-1 rounded border border-gray-400
@@ -350,7 +371,7 @@ export default function InterviewClient({ conditions }: { conditions: Conditions
                             </div>
                         </div>
 
-                        {phase !== "summarizing" && phase !== "done" && <FaceMeter onScore={handleScore} />}
+                        {interviewing && <FaceMeter onScore={handleScore} />}
 
                         {error ? (
                             <div className={cardClass}>
@@ -367,6 +388,8 @@ export default function InterviewClient({ conditions }: { conditions: Conditions
                             <Pending className="text-center">{WAITING.question}</Pending>
                         ) : phase === "summarizing" ? (
                             <Pending className="text-center">{WAITING.summary}</Pending>
+                        ) : phase === "saving" ? (
+                            <Pending className="text-center">{WAITING.saving}</Pending>
                         ) : phase !== "done" ? (
                             <div className={questionCardClass}>
                                 <h2 className="font-bold mb-2">面接官</h2>
@@ -426,6 +449,8 @@ export default function InterviewClient({ conditions }: { conditions: Conditions
                                                 onError={handleRecorderError}
                                                 disabled={phase === "transcribing"}
                                             />
+                                        ) : preparingQuestion ? (
+                                            <Pending>{WAITING.tts}</Pending>
                                         ) : (
                                             <p className="text-gray-500 dark:text-gray-400">
                                                 質問を聞いてください。読み終わると録音が始まります。
@@ -461,8 +486,17 @@ export default function InterviewClient({ conditions }: { conditions: Conditions
                                         <span className="text-red-500">
                                             ⚠ {saveError}{" "}
                                             <button
-                                                onClick={() => save(turns, summary)}
-                                                className="underline cursor-pointer">再保存</button>
+                                                onClick={async () => {
+                                                    if (resaving) return;
+                                                    setResaving(true);
+                                                    await save(turns, summary);
+                                                    setResaving(false);
+                                                }}
+                                                disabled={resaving}
+                                                className="underline cursor-pointer disabled:no-underline
+                                                    disabled:cursor-not-allowed">
+                                                {resaving ? WAITING.saving : "再保存"}
+                                            </button>
                                         </span>
                                     ) : (
                                         <span>✓ 保存しました</span>

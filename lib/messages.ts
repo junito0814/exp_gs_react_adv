@@ -16,4 +16,6 @@ export const WAITING = {
     deleting: "削除中…",                     // 履歴の削除（ボタン文言）
     loading: "読み込んでいます…",              // 画面の読み込み（loading.tsx。目では骨組みを見せる）
     moving: "準備しています…",                 // 練習画面へ移動している間（ボタン文言）
+    micPermission: "マイクの許可を確認しています…", // 面接開始時の getUserMedia 待ち
+    saving: "保存しています…",                 // 総評ができてから DB に保存するまで
 } as const;

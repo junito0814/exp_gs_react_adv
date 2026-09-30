@@ -8,6 +8,7 @@ import Link from "next/link";
 import { TOPICS_BY_CAREER, TOPIC_MAX } from "@/lib/options";
 import { describeConditions, type Conditions } from "@/lib/conditions";
 import Pending from "@/app/Pending";
+import { SkeletonBox, SkeletonLines } from "@/app/Skeleton";
 import { WAITING } from "@/lib/messages";
 
 const FREE_TOPIC = "__free__"; // プルダウンの「自由入力」を表す値
@@ -226,6 +227,20 @@ export default function PracticeClient({ conditions }: { conditions: Conditions 
           disabled={answer.trim() === "" || topic === "" || loading}>
           {loading ? "生成中…" : "コーチに見てもらう"}
         </button>
+
+        {loading && (
+          <div
+            className="mt-12 max-w-2xl mx-auto p-6 text-left
+           bg-red-50 dark:bg-gray-700 border-l-4 border-red-500 rounded-r-lg shadow-md"
+            aria-busy="true">
+            <SkeletonBox className="h-7 w-48 mb-4" />
+            <div className="flex flex-col gap-6">
+              <SkeletonLines count={3} />
+              <SkeletonLines count={3} />
+              <SkeletonLines count={2} />
+            </div>
+          </div>
+        )}
 
         {feedback && (
           <div
