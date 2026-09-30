@@ -14,4 +14,6 @@ export const WAITING = {
     summary: "総評をまとめています…",          // /api/interview/summary
     tts: "音声を準備しています…",             // /api/tts で音声を作っている
     deleting: "削除中…",                     // 履歴の削除（ボタン文言）
+    loading: "読み込んでいます…",              // 画面の読み込み（loading.tsx。目では骨組みを見せる）
+    moving: "準備しています…",                 // 練習画面へ移動している間（ボタン文言）
 } as const;

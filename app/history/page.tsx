@@ -5,6 +5,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { DeleteButton } from "./DeleteButton";
+import TabLink from "./TabLink";
 import { requireUserId } from "@/lib/auth";
 import { describeConditions } from "@/lib/conditions";
 import { formatDate, truncate } from "@/lib/format";
@@ -42,16 +43,13 @@ export default async function HistoryPage({
                 {/* モードのタブ。URL に ?mode= が付くのでリロードしても保たれる */}
                 <div className="flex justify-center border-b border-gray-300 dark:border-gray-600 mb-8">
                     {TABS.map((tab) => (
-                        <Link
+                        <TabLink
                             key={tab.mode}
-                            href={`/history?mode=${tab.mode}`}
-                            aria-current={tab.mode === mode ? "page" : undefined}
-                            className={`px-6 py-2 ${tab.mode === mode
-                                ? "font-bold border-b-4 border-red-500"
-                                : "text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white"}`}>
-                            {tab.label}
-                            {tab.mode === mode && `（${rows.length}）`}
-                        </Link>
+                            mode={tab.mode}
+                            label={tab.label}
+                            current={tab.mode === mode}
+                            count={rows.length}
+                        />
                     ))}
                 </div>
 
