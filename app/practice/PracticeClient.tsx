@@ -7,6 +7,7 @@ import Recorder from "@/app/Recorder";
 import Link from "next/link";
 import { TOPICS_BY_CAREER, TOPIC_MAX } from "@/lib/options";
 import { describeConditions, type Conditions } from "@/lib/conditions";
+import Notice from "@/app/Notice";
 import Pending from "@/app/Pending";
 import { SkeletonBox, SkeletonLines } from "@/app/Skeleton";
 import { PRACTICE_SEND_NOTICE, WAITING } from "@/lib/messages";
@@ -178,9 +179,9 @@ export default function PracticeClient({ conditions }: { conditions: Conditions 
         <h1 className="font-serif text-4xl p-3 mt-6 mb-2">講評モード</h1>
         <p className="text-gray-600 dark:text-gray-300 mb-2">{describeConditions(conditions)}</p>
         {/* 録音より前に読める位置に置く（NFR-04 / FR-P17） */}
-        <p className="max-w-xl mx-auto mb-6 text-sm text-left text-gray-500 dark:text-gray-400">
-          {PRACTICE_SEND_NOTICE}
-        </p>
+        <div className="max-w-xl mx-auto mb-6">
+          <Notice>{PRACTICE_SEND_NOTICE}</Notice>
+        </div>
 
         <FaceMeter
           onScore={setSmileScore} />

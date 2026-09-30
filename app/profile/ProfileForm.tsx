@@ -2,6 +2,7 @@
 // app/profile/ProfileForm.tsx — ES / 職務経歴書（履歴書形式）/ 免許・資格の入力
 
 import { useState } from "react";
+import Notice from "@/app/Notice";
 import { AI_SEND_NOTICE } from "@/lib/messages";
 import {
     ES_MAX, QUALIFICATIONS_MAX, HISTORY_MAX_ROWS, HISTORY_TEXT_MAX, HISTORY_YEAR_MIN,
@@ -11,18 +12,6 @@ import type { HistoryRow } from "@/lib/types";
 
 const THIS_YEAR = new Date().getFullYear();
 const inputClass = "ring-2 ring-gray-300 dark:ring-gray-600 rounded p-2 bg-white dark:bg-gray-700";
-
-// AI に送られることの注意書き。画面の冒頭で 1 回だけ出す。
-// 以前は 3 セクションの直下に同じ文を出していたが、同じ文章が 3 回並んで読み飛ばされるため
-// 「すべて任意です」の下に移した（入力欄より前に読める位置なので目的は満たせる）
-function Notice() {
-    return (
-        <p className="text-sm text-amber-800 dark:text-amber-200 bg-amber-50 dark:bg-amber-900/30
-            border border-amber-300 dark:border-amber-700 rounded p-3 leading-relaxed text-left">
-            ⚠ {AI_SEND_NOTICE}
-        </p>
-    );
-}
 
 function Section({ title, desc, children }: { title: string; desc?: string; children: React.ReactNode }) {
     return (
@@ -74,7 +63,8 @@ export default function ProfileForm({ initial }: { initial: Profile }) {
 
     return (
         <div className="flex flex-col gap-6 text-left">
-            <Notice />
+            {/* 入力欄より前に 1 回だけ出す（#66） */}
+            <Notice>{AI_SEND_NOTICE}</Notice>
 
             <Section title="ES（エントリーシート）" desc="ガクチカ・自己PR・志望動機の骨子など">
                 <textarea
