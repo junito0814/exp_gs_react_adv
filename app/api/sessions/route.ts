@@ -51,6 +51,9 @@ export async function POST(request: Request) {
         level: c.level,
         stage: c.stage,
         company: c.company,
+        // 「その他」以外なら parseConditions が空にしているので null になる
+        industryOther: c.industryOther || null,
+        jobOther: c.jobOther || null,
     };
 
     // 保存する内容をモードごとに決める

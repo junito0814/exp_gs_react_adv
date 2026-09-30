@@ -6,7 +6,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
     INDUSTRIES, JOBS, CAREERS, LEVELS, STAGES, COMPANIES,
-    BACKGROUND_LABEL, BACKGROUND_PLACEHOLDER, BACKGROUND_MAX,
+    BACKGROUND_LABEL, BACKGROUND_PLACEHOLDER, BACKGROUND_MAX, OTHER_MAX,
     INTERVIEW_TURNS, descriptionOf,
 } from "@/lib/options";
 import { DEFAULT_CONDITIONS, toQuery, type Conditions } from "@/lib/conditions";
@@ -14,6 +14,7 @@ import { WAITING } from "@/lib/messages";
 
 const selectClass =
     "w-full max-w-md ring-2 ring-gray-300 dark:ring-gray-600 rounded p-2 bg-white dark:bg-gray-700 cursor-pointer";
+const inputClass = selectClass.replace("cursor-pointer", "");
 
 export default function ConditionForm({ initial }: { initial?: Conditions }) {
     const router = useRouter();
@@ -39,6 +40,12 @@ export default function ConditionForm({ initial }: { initial?: Conditions }) {
                         onChange={(e) => update("industry", e.target.value as Conditions["industry"])}>
                         {INDUSTRIES.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
                     </select>
+                    {c.industry === "other" && (
+                        <input type="text" className={inputClass}
+                            value={c.industryOther} maxLength={OTHER_MAX}
+                            placeholder="例：不動産、教育、物流"
+                            onChange={(e) => update("industryOther", e.target.value)} />
+                    )}
                 </label>
 
                 <label className="flex flex-col gap-1">
@@ -47,6 +54,12 @@ export default function ConditionForm({ initial }: { initial?: Conditions }) {
                         onChange={(e) => update("job", e.target.value as Conditions["job"])}>
                         {JOBS.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
                     </select>
+                    {c.job === "other" && (
+                        <input type="text" className={inputClass}
+                            value={c.jobOther} maxLength={OTHER_MAX}
+                            placeholder="例：人事、経理、デザイナー"
+                            onChange={(e) => update("jobOther", e.target.value)} />
+                    )}
                 </label>
 
                 <fieldset className="flex flex-col gap-1">
@@ -64,7 +77,7 @@ export default function ConditionForm({ initial }: { initial?: Conditions }) {
 
                 <label className="flex flex-col gap-1">
                     <span className="text-sm">{BACKGROUND_LABEL[c.career]}（任意）</span>
-                    <input type="text" className={selectClass.replace("cursor-pointer", "")}
+                    <input type="text" className={inputClass}
                         value={c.background} maxLength={BACKGROUND_MAX}
                         placeholder={BACKGROUND_PLACEHOLDER[c.career]}
                         onChange={(e) => update("background", e.target.value)} />

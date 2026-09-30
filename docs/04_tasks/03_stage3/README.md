@@ -14,5 +14,5 @@
 | 5 | 履歴からの再挑戦 | [05_retry.md](./05_retry.md) | 半日 | [ ] |
 | 6 | 前回回答との比較 | [06_compare_previous.md](./06_compare_previous.md) | 1 日 | [ ] |
 | 7 | NG 表現の指摘 | [07_ng_expressions.md](./07_ng_expressions.md) | 半日 | [x] |
-| 8 | 「その他」の自由入力 | [08_other_free_text.md](./08_other_free_text.md) | 半日 | [ ] |
+| 8 | 「その他」の自由入力 | [08_other_free_text.md](./08_other_free_text.md) | 半日 | [x] |
 | 9 | 面接官レベルの表示名と説明文（改善 #43） | [09_level_labels.md](./09_level_labels.md) | 30 分 | [x] |
