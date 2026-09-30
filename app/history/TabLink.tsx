@@ -9,23 +9,23 @@ import Link from "next/link";
 import { useLinkStatus } from "next/link";
 
 // useLinkStatus は Link の子孫でしか使えないので、中身を別コンポーネントにする
-function TabLabel({ label, current, count }: { label: string; current: boolean; count?: number }) {
+function TabLabel({ label, children }: { label: string; children?: React.ReactNode }) {
     const { pending } = useLinkStatus();
     return (
         <span className={pending ? "opacity-50" : undefined}>
             {label}
-            {current && count !== undefined && `（${count}）`}
+            {children}
         </span>
     );
 }
 
 export default function TabLink({
-    mode, label, current, count,
+    mode, label, current, children,
 }: {
     mode: string;
     label: string;
     current: boolean;
-    count?: number;
+    children?: React.ReactNode; // 件数（Server Component。DB を待つので後から届く）
 }) {
     return (
         <Link
@@ -36,7 +36,7 @@ export default function TabLink({
             className={`px-6 py-2 ${current
                 ? "font-bold border-b-4 border-red-500"
                 : "text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white"}`}>
-            <TabLabel label={label} current={current} count={count} />
+            <TabLabel label={label}>{children}</TabLabel>
         </Link>
     );
 }
