@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "AI 面接コーチ",
+  title: "AI面接練習コーチ",
   description: "AI が面接官役になって質問・深掘り・講評をする面接練習アプリ",
 };
 
@@ -30,7 +30,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <body className="min-h-full flex flex-col bg-white dark:bg-gray-800 text-black dark:text-white">
           {/* 共通ヘッダー: ログイン中はアカウントボタン（ログアウトはここから） */}
           <header className="flex items-center justify-between h-14 px-6 border-b border-gray-200 dark:border-gray-700">
-            <Link href="/" className="font-serif text-lg">AI 面接コーチ</Link>
+            <Link href="/" className="font-serif text-lg">AI面接練習コーチ</Link>
             <Show when="signed-in">
               <UserButton />
             </Show>

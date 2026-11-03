@@ -1,4 +1,4 @@
-# AI 面接コーチ
+# AI面接練習コーチ
 
 [![CI](https://github.com/junito0814/exp_gs_react_adv/actions/workflows/ci.yml/badge.svg)](https://github.com/junito0814/exp_gs_react_adv/actions/workflows/ci.yml)
 

@@ -19,7 +19,7 @@
 | T-132.2 | 志望業界・志望職種・区分・面接官レベルの `<select>` を `lib/options.ts` から生成 | 選択肢の並びが要求 4.1 と同じ | [x] |
 | T-132.3 | `background` の `<input maxLength={100}>`。ラベルは `BACKGROUND_LABEL[career]`。下に「入力すると質問が具体的になります」 | 区分を切り替えるとラベルが変わる | [x] |
 | T-132.4 | 年齢・性別などの欄が無いことを確認（要求 4.1.2） | - | [x] |
-| T-132.5 | 新しい `app/page.tsx`（Server Component）：見出し「AI 面接コーチ」＋ `<ConditionForm />` ＋ リンク群 | - | [x] |
+| T-132.5 | 新しい `app/page.tsx`（Server Component）：見出し「AI面接練習コーチ」＋ `<ConditionForm />` ＋ リンク群 | - | [x] |
 
 ## T-133 遷移
 
