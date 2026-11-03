@@ -2,7 +2,8 @@
 import { db } from "@/db";
 import { profiles } from "@/db/schema";
 import { requireUserId, unauthorized } from "@/lib/auth";
-import { validateProfile } from "@/lib/profile";
+import { parseJsonBody, writeDb } from "@/lib/http";
+import { profileSchema } from "@/lib/profile";
 import { getProfile } from "@/lib/profile-db";
 
 export async function GET() {
@@ -15,23 +16,18 @@ export async function PUT(request: Request) {
     const userId = await requireUserId();
     if (!userId) return unauthorized();
 
-    let body: unknown;
-    try {
-        body = await request.json();
-    } catch {
-        return Response.json({ error: "リクエストの形式が不正です" }, { status: 400 });
-    }
-
-    const result = validateProfile(body);
-    if (!result.ok) return Response.json({ error: result.error }, { status: 400 });
+    // 画面のフォームと同じスキーマで検証する（#70）
+    const parsed = await parseJsonBody(request, profileSchema);
+    if (!parsed.ok) return parsed.response;
 
     // 1 ユーザー 1 行。あれば上書き（updatedAt も更新）
-    await db.insert(profiles)
-        .values({ userId, ...result.value })
-        .onConflictDoUpdate({
-            target: profiles.userId,
-            set: { ...result.value, updatedAt: new Date() },
-        });
-
-    return Response.json({ ok: true });
+    return writeDb(async () => {
+        await db.insert(profiles)
+            .values({ userId, ...parsed.value })
+            .onConflictDoUpdate({
+                target: profiles.userId,
+                set: { ...parsed.value, updatedAt: new Date() },
+            });
+        return Response.json({ ok: true });
+    });
 }

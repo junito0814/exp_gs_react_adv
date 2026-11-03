@@ -1,6 +1,7 @@
 // lib/interview.ts — 模擬面接の往復データの検証
-import { INTERVIEW_TURNS } from "./options";
-import { TOPICS_BY_CAREER, type CareerKey } from "./options";
+import { INTERVIEW_TURNS, TOPICS_BY_CAREER, type CareerKey } from "./options";
+import { z } from "zod";
+import { issueMessage, turnSchema } from "./schemas";
 import type { Turn } from "./types";
 
 // 面接のテーマを定番から 1 つ選ぶ。
@@ -13,54 +14,43 @@ export function pickTopic(career: CareerKey, exclude?: string | null): string {
     return list[Math.floor(Math.random() * list.length)];
 }
 
-const ANSWER_MAX = 4000; // 文字起こし結果の上限（長すぎる入力を弾く）
+// 定番テーマに含まれるか。クライアントから返ってきた topic は、これを満たすときだけ使う
+// （任意の文字列をそのままプロンプトに入れさせない。#70）
+export function isKnownTopic(career: CareerKey, topic: unknown): topic is string {
+    return typeof topic === "string" && TOPICS_BY_CAREER[career].includes(topic);
+}
 
 type Result<T> = { ok: true; value: T } | { ok: false; error: string };
 
-// body.turns を検証する。
-// requireMetrics: true のとき smileScore と answerSeconds も必須（総評用）
+const turnsSchema = z
+    .array(turnSchema, { error: "turns の形式が不正です" })
+    .max(INTERVIEW_TURNS, `turns は ${INTERVIEW_TURNS} 件までです`);
+
+// body.turns を検証する（形式・文字数は lib/schemas.ts の turnSchema。未知の項目は拒否）。
+// requireMetrics: true のとき smileScore と answerSeconds も必須（総評・保存用）
 export function validateTurns(
     raw: unknown,
     { requireMetrics }: { requireMetrics: boolean },
 ): Result<Turn[]> {
     if (raw === undefined || raw === null) return { ok: true, value: [] };
-    if (!Array.isArray(raw)) return { ok: false, error: "turns の形式が不正です" };
-    if (raw.length > INTERVIEW_TURNS) {
-        return { ok: false, error: `turns は ${INTERVIEW_TURNS} 件までです` };
+    const parsed = turnsSchema.safeParse(raw);
+    if (!parsed.success) {
+        const issue = parsed.error.issues[0];
+        // 配列でない・多すぎるなど turns そのものの誤りは、turnsSchema に書いた文言をそのまま出す
+        return { ok: false, error: issue?.path.length === 0 ? issue.message : `turns: ${issueMessage(issue)}` };
     }
 
     const turns: Turn[] = [];
-    for (const [i, item] of raw.entries()) {
-        if (typeof item !== "object" || item === null) {
-            return { ok: false, error: `turns[${i}] の形式が不正です` };
+    for (const [i, t] of parsed.data.entries()) {
+        if (requireMetrics && (t.smileScore == null || t.answerSeconds == null)) {
+            return { ok: false, error: `turns: ${i + 1} 件目：笑顔スコアと回答秒数が必要です` };
         }
-        const t = item as Record<string, unknown>;
-        const question = typeof t.question === "string" ? t.question.trim() : "";
-        const answer = typeof t.answer === "string" ? t.answer.trim() : "";
-        if (!question) return { ok: false, error: `turns[${i}].question が空です` };
-        if (!answer) return { ok: false, error: `turns[${i}].answer が空です` };
-        if (answer.length > ANSWER_MAX) {
-            return { ok: false, error: `turns[${i}].answer が長すぎます` };
-        }
-
-        // スコアと秒数は 0 以上の整数に丸める（総評では必須）
-        const smileScore = Number(t.smileScore);
-        const answerSeconds = Number(t.answerSeconds);
-        if (requireMetrics) {
-            if (!Number.isFinite(smileScore) || smileScore < 0 || smileScore > 100) {
-                return { ok: false, error: `turns[${i}].smileScore が不正です` };
-            }
-            if (!Number.isFinite(answerSeconds) || answerSeconds < 0) {
-                return { ok: false, error: `turns[${i}].answerSeconds が不正です` };
-            }
-        }
-        const thinking = Number(t.thinkingSeconds);
         turns.push({
-            question,
-            answer,
-            ...(Number.isFinite(thinking) && thinking >= 0 ? { thinkingSeconds: Math.round(thinking) } : {}),
-            smileScore: Number.isFinite(smileScore) ? Math.round(Math.min(Math.max(smileScore, 0), 100)) : 0,
-            answerSeconds: Number.isFinite(answerSeconds) ? Math.round(Math.max(answerSeconds, 0)) : 0,
+            question: t.question,
+            answer: t.answer,
+            ...(t.thinkingSeconds != null ? { thinkingSeconds: t.thinkingSeconds } : {}),
+            smileScore: t.smileScore ?? 0,
+            answerSeconds: t.answerSeconds ?? 0,
         });
     }
     return { ok: true, value: turns };

@@ -12,6 +12,7 @@
 | [03_stage3/](./03_stage3/README.md) | 余裕があれば。8 機能を上から順に | 提出後 | 未着手 |
 | [04_loading/](./04_loading/README.md) | 待ち時間の表示（ローディング）。優先度順に phase 1〜3 | 提出後 | phase 1〜3 実装済み（確認待ち） |
 | [05_ai_send_notice.md](./05_ai_send_notice.md) | 練習画面の AI 送信の注意書き（#67） | 提出後 | 実装済み（確認待ち） |
+| [06_security_validation.md](./06_security_validation.md) | 入力検証とセキュリティの強化（#70） | 提出後 | 実装済み（確認待ち） |
 | [99_backlog.md](./99_backlog.md) | 段階に紐づかない改善 | - | - |
 
 ## スケジュール

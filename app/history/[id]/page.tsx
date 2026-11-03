@@ -8,6 +8,7 @@ import Link from "next/link";
 import { requireUserId } from "@/lib/auth";
 import { describeConditions } from "@/lib/conditions";
 import { formatDate } from "@/lib/format";
+import { parseId } from "@/lib/schemas";
 
 const cardClass = "bg-red-50 dark:bg-gray-700 border-l-4 border-red-500 rounded-r-lg shadow-md leading-relaxed";
 const cardTitleClass = "font-bold text-xl mb-4 border-b pb-2 border-red-200 dark:border-gray-600";
@@ -22,9 +23,11 @@ export default async function HistoryDetail({
 
     const { id } = await params;
     // id が数値でない・他人の記録・存在しない はすべて「見つかりませんでした」
-    const row = /^\d+$/.test(id)
+    // 桁が大きすぎる id も DB に投げる前に弾く（integer の範囲外で 500 になるため。#70）
+    const num = parseId(id);
+    const row = num !== null
         ? (await db.select().from(sessions)
-            .where(and(eq(sessions.id, Number(id)), eq(sessions.userId, userId))))[0]
+            .where(and(eq(sessions.id, num), eq(sessions.userId, userId))))[0]
         : undefined;
 
     if (!row) {

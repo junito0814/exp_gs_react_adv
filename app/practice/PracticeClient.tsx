@@ -2,6 +2,8 @@
 // app/practice/PracticeClient.tsx（講評モード。旧トップ画面を移動し、面接条件に対応）
 
 import { useState, useRef } from "react";
+import { useForm, useWatch } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import FaceMeter from "@/app/FaceMeter";
 import Recorder from "@/app/Recorder";
 import Link from "next/link";
@@ -10,19 +12,33 @@ import { describeConditions, type Conditions } from "@/lib/conditions";
 import Notice from "@/app/Notice";
 import Pending from "@/app/Pending";
 import { SkeletonBox, SkeletonLines } from "@/app/Skeleton";
+import FieldError from "@/app/FieldError";
 import { PRACTICE_SEND_NOTICE, WAITING } from "@/lib/messages";
+import { ANSWER_MAX, FREE_TOPIC, MEMO_MAX, practiceFormSchema } from "@/lib/schemas";
+import type { z } from "zod";
 
-const FREE_TOPIC = "__free__"; // プルダウンの「自由入力」を表す値
+type PracticeForm = z.output<typeof practiceFormSchema>;
+
+// 実際に使うテーマ（定番 or 自由入力）
+const topicOf = (v: { topicSelect: string; freeTopic: string }) =>
+  (v.topicSelect === FREE_TOPIC ? v.freeTopic : v.topicSelect).trim();
 
 export default function PracticeClient({ conditions }: { conditions: Conditions }) {
   const topics = TOPICS_BY_CAREER[conditions.career];
-  const [answer, setAnswer] = useState("");
-  const [topicSelect, setTopicSelect] = useState<string>(topics[0]); // 定番 or FREE_TOPIC
-  const [freeTopic, setFreeTopic] = useState("");                     // 自由入力の内容
-  const topic = (topicSelect === FREE_TOPIC ? freeTopic : topicSelect).trim(); // 実際に使うテーマ
-  const [memo, setMemo] = useState("")
+  // テーマ・回答・メモは lib/schemas.ts の practiceFormSchema で検証する（API と同じ上限。#70）
+  const { register, control, handleSubmit, setValue, trigger, getValues, formState: { errors } } = useForm({
+    resolver: zodResolver(practiceFormSchema),
+    defaultValues: { topicSelect: topics[0], freeTopic: "", answer: "", memo: "" },
+    mode: "onBlur",
+  });
+  const [topicSelect, freeTopic, answer] = useWatch({ control, name: ["topicSelect", "freeTopic", "answer"] });
+  const topic = topicOf({ topicSelect, freeTopic });
   const [smileScore, setSmileScore] = useState(0);
   const [feedback, setFeedback] = useState("");
+  // 講評を作れなかった理由。講評の枠（保存・読み上げボタン付き）には入れない
+  const [feedbackError, setFeedbackError] = useState("");
+  // 講評を頼んだときのテーマ・回答・笑顔スコア。あとで欄を書き換えても、保存するのは講評と対になるこの内容
+  const [reviewed, setReviewed] = useState<{ topic: string; answer: string; smileScore: number } | null>(null);
   const [loading, setLoading] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   // 音声を作っている間（押してから音が出るまで）。停止ボタンだけ出るのを避ける
@@ -33,9 +49,10 @@ export default function PracticeClient({ conditions }: { conditions: Conditions 
   const audioRef = useRef<HTMLAudioElement | null>(null); //再生中のAudioを保持
 
 
-  async function handleSubmit() {
+  async function requestFeedback(values: PracticeForm) {
     setLoading(true);
     setFeedback("");
+    setFeedbackError("");
 
     // 自分のAPI(/api/coach)を呼ぶ（Groqのキーはこの先＝サーバー側にある）
     // 通信やAPI側の失敗で画面が無反応にならないよう try/catch/finally で守る
@@ -43,15 +60,16 @@ export default function PracticeClient({ conditions }: { conditions: Conditions 
       const res = await fetch("/api/coach", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ topic, answer, conditions }),
+        body: JSON.stringify({ topic: topicOf(values), answer: values.answer, conditions }),
       });
-      // if (res.ok) {
-      //   setAnswer("");
-      // }
-      const data = await res.json();
-      setFeedback(data.feedback ?? "エラーが起きました。もう一度お試しください。");
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && typeof data.feedback === "string") {
+        setFeedback(data.feedback);
+        setReviewed({ topic: topicOf(values), answer: values.answer, smileScore });
+      }
+      else setFeedbackError(typeof data.error === "string" ? data.error : "エラーが起きました。もう一度お試しください。");
     } catch {
-      setFeedback("通信に失敗しました。ネットワークを確認してください。");
+      setFeedbackError("通信に失敗しました。ネットワークを確認してください。");
     } finally {
       setLoading(false);
     }
@@ -153,13 +171,17 @@ export default function PracticeClient({ conditions }: { conditions: Conditions 
 
   const [saving, setSaving] = useState(false);
   async function save() {
-    if (saving) return;
+    if (saving || !reviewed) return;
+    // 保存のときに確かめるのはメモだけ（テーマ・回答は講評を頼んだ時点で検証済み）
+    if (!(await trigger("memo"))) return;
     setSaving(true);
     try {
       const res = await fetch("/api/sessions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mode: "practice", conditions, topic, answer, smileScore, feedback, memo }),
+        body: JSON.stringify({
+          mode: "practice", conditions, ...reviewed, feedback, memo: getValues("memo"),
+        }),
       });
       alert(res.ok ? "保存しました" : "保存に失敗しました");
     } catch {
@@ -186,52 +208,69 @@ export default function PracticeClient({ conditions }: { conditions: Conditions 
         <FaceMeter
           onScore={setSmileScore} />
       
-        <Recorder onText={(t) => setAnswer(t)} />
+        <Recorder onText={(t) => setValue("answer", t, { shouldValidate: true, shouldDirty: true })} />
 
         <div className="text-lg">
           テーマ：
           <select
-            value={topicSelect}
-            onChange={(e) => setTopicSelect(e.target.value)}
+            {...register("topicSelect")}
             className="cursor-pointer">
             {topics.map((t) => <option key={t} value={t}>{t}</option>)}
             <option value={FREE_TOPIC}>自由入力</option>
           </select>
         </div>
         {topicSelect === FREE_TOPIC && (
-          <input
-            type="text"
-            value={freeTopic}
-            maxLength={TOPIC_MAX}
-            onChange={(e) => setFreeTopic(e.target.value)}
-            className="w-full max-w-xl mt-3 ring-2 rounded p-2"
-            placeholder="例：挫折経験、10 年後のキャリア、あなたにとって仕事とは"
-          />
+          <div className="max-w-xl mx-auto">
+            <input
+              type="text"
+              {...register("freeTopic")}
+              maxLength={TOPIC_MAX}
+              aria-label="テーマ（自由入力）"
+              aria-invalid={!!errors.freeTopic}
+              aria-describedby="freeTopic-error"
+              className="w-full mt-3 ring-2 rounded p-2 aria-[invalid=true]:ring-red-400"
+              placeholder="例：挫折経験、10 年後のキャリア、あなたにとって仕事とは"
+            />
+            <FieldError id="freeTopic-error" message={errors.freeTopic?.message} />
+          </div>
         )}
 
-        <textarea
-          value={answer}
-          onChange={(e) => setAnswer(e.target.value)}
-          rows={5}
-          className="w-full max-w-xl m-10 ring-2 rounded p-2"
-          placeholder="ここに回答を入力"
-        />
+        <div className="max-w-xl mx-auto my-10">
+          <textarea
+            {...register("answer")}
+            rows={5}
+            maxLength={ANSWER_MAX}
+            aria-label="回答"
+            aria-invalid={!!errors.answer}
+            aria-describedby="answer-error"
+            className="w-full ring-2 rounded p-2 aria-[invalid=true]:ring-red-400"
+            placeholder="ここに回答を入力"
+          />
+          <FieldError id="answer-error" message={errors.answer?.message} />
+        </div>
 
-        <textarea
-          value={memo}
-          onChange={(e) => setMemo(e.target.value)}
-          rows={5}
-          className="h-20 w-full max-w-xl  ring-2 rounded p-2"
-          placeholder="ここにメモを入力"
-        />
+        <div className="max-w-xl mx-auto">
+          <textarea
+            {...register("memo")}
+            rows={5}
+            maxLength={MEMO_MAX}
+            aria-label="メモ"
+            aria-invalid={!!errors.memo}
+            aria-describedby="memo-error"
+            className="h-20 w-full ring-2 rounded p-2 aria-[invalid=true]:ring-red-400"
+            placeholder="ここにメモを入力"
+          />
+          <FieldError id="memo-error" message={errors.memo?.message} />
+        </div>
 
         <button
           className="bg-red-400 text-white px-4 py-2 rounded 
         hover:bg-red-500 transition duration-300 transform hover:scale-110 cursor-pointer"
-          onClick={handleSubmit}
+          onClick={handleSubmit(requestFeedback)}
           disabled={answer.trim() === "" || topic === "" || loading}>
           {loading ? "生成中…" : "コーチに見てもらう"}
         </button>
+        {feedbackError && <p role="alert" className="mt-4 text-sm text-red-500">{feedbackError}</p>}
 
         {loading && (
           <div

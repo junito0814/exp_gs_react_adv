@@ -7,21 +7,20 @@ import {
     buildInterviewerSystemPrompt, buildFirstQuestionPrompt, buildFollowUpPrompt, parseQuestion,
 } from "@/lib/prompts";
 import { INTERVIEW_TURNS } from "@/lib/options";
-import { validateTurns, pickTopic } from "@/lib/interview";
+import { validateTurns, pickTopic, isKnownTopic } from "@/lib/interview";
 import { chat } from "@/lib/groq";
+import { parseJsonBody } from "@/lib/http";
+import { QUESTION_MAX, finalizeText, interviewRequestSchema } from "@/lib/schemas";
 
 export async function POST(request: Request) {
     const userId = await requireUserId();
     if (!userId) return unauthorized();
 
-    let body;
-    try {
-        body = await request.json();
-    } catch {
-        return Response.json({ error: "リクエストの形式が不正です" }, { status: 400 });
-    }
+    const parsed = await parseJsonBody(request, interviewRequestSchema);
+    if (!parsed.ok) return parsed.response;
+    const body = parsed.value;
 
-    const conditions = parseConditions(body.conditions ?? {});
+    const conditions = parseConditions(body.conditions);
     // これまでの往復（質問・回答）。3 往復目まで終わっていれば質問はもう作らない
     const turns = validateTurns(body.turns, { requireMetrics: false });
     if (!turns.ok) return Response.json({ error: turns.error }, { status: 400 });
@@ -30,10 +29,11 @@ export async function POST(request: Request) {
     }
 
     const profileText = formatProfileForPrompt(await getProfile(userId));
-    // 1 問目のテーマ。2 問目以降は body.topic（1 問目で使ったテーマ）を引き継ぐ
-    const topic = typeof body.topic === "string" && body.topic.trim()
-        ? body.topic.trim()
-        : pickTopic(conditions.career, typeof body.lastTopic === "string" ? body.lastTopic : null);
+    // 1 問目のテーマ。2 問目以降は body.topic（1 問目で使ったテーマ）を引き継ぐ。
+    // topic はプロンプトに入るので、定番テーマのどれかと一致するときだけ使い、それ以外は選び直す（#70）
+    const topic = isKnownTopic(conditions.career, body.topic)
+        ? body.topic
+        : pickTopic(conditions.career, isKnownTopic(conditions.career, body.lastTopic) ? body.lastTopic : null);
 
     const messages: { role: "system" | "user" | "assistant"; content: string }[] = [
         { role: "system", content: buildInterviewerSystemPrompt(conditions, profileText) },
@@ -53,9 +53,11 @@ export async function POST(request: Request) {
     const result = await chat(messages);
     if (!result.ok) return Response.json({ error: result.error }, { status: 502 });
 
-    const question = parseQuestion(result.content);
+    // 次のリクエストで turns として送り返されるので、受け付ける形（整形・上限）にそろえておく（#70）
+    const question = finalizeText(parseQuestion(result.content), QUESTION_MAX);
     if (!question) {
-        console.error("質問が空でした:", result.content);
+        // 出力には回答やプロフィールが反映されているので、本文はログに残さない
+        console.error("質問が空でした（出力の長さ）:", result.content.length);
         return Response.json({ error: "質問の生成に失敗しました" }, { status: 502 });
     }
     // topic は次のリクエストでそのまま返してもらう（テーマを固定するため）

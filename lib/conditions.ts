@@ -7,6 +7,7 @@ import {
     type IndustryKey, type JobKey, type CareerKey, type LevelKey,
     type StageKey, type CompanyKey,
 } from "./options";
+import { RAW_FACTOR, cleanText, clip } from "./schemas";
 
 export type Conditions = {
     industry: IndustryKey;   // 志望業界
@@ -38,29 +39,32 @@ const KEYS = [
 ] as const;
 
 // searchParams（Next.js の `await searchParams` の結果や URLSearchParams、API body）から条件を組み立てる。
-// 不正な値は初期値に丸め、background は 100 文字で切り詰める。
+// 不正な値は初期値に丸め、自由入力は見えない文字を除いて上限で切り詰める。
 // isEmpty: 条件のキーが 1 つも無かった（= 直接 URL を開いた）とき true
 export function parseConditions(
-    input: Record<string, string | string[] | undefined> | URLSearchParams | null | undefined,
+    input: unknown, // searchParams のオブジェクト・URLSearchParams・API body の conditions
 ): Conditions & { isEmpty: boolean } {
+    // API の body から来たときは数値やオブジェクトも入りうるので、文字列以外は「無い」として扱う
     const get = (k: string): string | undefined => {
-        if (!input) return undefined;
+        if (!input || typeof input !== "object") return undefined;
         if (input instanceof URLSearchParams) return input.get(k) ?? undefined;
-        const v = input[k];
-        return Array.isArray(v) ? v[0] : v;
+        const raw: unknown = Object.hasOwn(input, k) ? (input as Record<string, unknown>)[k] : undefined;
+        const v = Array.isArray(raw) ? raw[0] : raw;
+        return typeof v === "string" ? v : undefined;
     };
+    // 1 行の自由入力：見えない文字・改行を除いてから上限で切る
+    const text = (k: string, max: number) => clip(cleanText(clip(get(k) ?? "", max * RAW_FACTOR), { multiline: false }).trim(), max);
     const isEmpty = KEYS.every((k) => get(k) === undefined);
     const industry = get("industry"), job = get("job"), career = get("career"), level = get("level");
     const stage = get("stage"), company = get("company");
     // 「その他」以外を選んでいるときの自由入力は捨てる（クライアントの値を信用しない）
-    const other = (key: string, selected: boolean) =>
-        selected ? (get(key) ?? "").trim().slice(0, OTHER_MAX) : "";
+    const other = (key: string, selected: boolean) => (selected ? text(key, OTHER_MAX) : "");
     return {
         industry: isKeyOf(INDUSTRIES, industry) ? industry : DEFAULT_CONDITIONS.industry,
         job: isKeyOf(JOBS, job) ? job : DEFAULT_CONDITIONS.job,
         career: isKeyOf(CAREERS, career) ? career : DEFAULT_CONDITIONS.career,
         level: isKeyOf(LEVELS, level) ? level : DEFAULT_CONDITIONS.level,
-        background: (get("background") ?? "").trim().slice(0, BACKGROUND_MAX),
+        background: text("background", BACKGROUND_MAX),
         stage: isKeyOf(STAGES, stage) ? stage : DEFAULT_CONDITIONS.stage,
         company: isKeyOf(COMPANIES, company) ? company : DEFAULT_CONDITIONS.company,
         industryOther: other("industryOther", industry === "other"),
