@@ -16,6 +16,7 @@ import { initialState, reducer } from "./reducer";
 import Notice from "@/app/Notice";
 import Pending from "@/app/Pending";
 import { PRACTICE_SEND_NOTICE, WAITING } from "@/lib/messages";
+import { ANSWER_MAX, issueMessage, turnSchema } from "@/lib/schemas";
 
 const cardClass = "p-6 bg-red-50 dark:bg-gray-700 border-l-4 border-red-500 rounded-r-lg shadow-md leading-relaxed";
 // 圧迫のときは面接官のカードを暗くして、画面の雰囲気も変える
@@ -135,21 +136,32 @@ export default function InterviewClient({ conditions }: { conditions: Conditions
         dispatch({ type: "useTextFallback" });
     }, []);
 
+    // 送信前の検証エラー（回答が長すぎる・見えない文字だけ など）
+    const [answerError, setAnswerError] = useState("");
+
     // 回答を送信する（送信後のやり直しはできない）
     const submit = useCallback(() => {
         const answer = transcript.trim();
         if (!answer) return;
-        dispatch({
-            type: "submit",
-            turn: {
-                question,
-                answer,
-                smileScore: answerSmileScore(),
-                answerSeconds: answerSeconds || Math.max(1, Math.round((Date.now() - startedAtRef.current) / 1000)),
-                ...(thinkingRef.current !== undefined ? { thinkingSeconds: thinkingRef.current } : {}),
-            },
-        });
-    }, [transcript, question, answerSeconds]);
+        const turn: Turn = {
+            question,
+            answer,
+            smileScore: answerSmileScore(),
+            answerSeconds: answerSeconds || Math.max(1, Math.round((Date.now() - startedAtRef.current) / 1000)),
+            ...(thinkingRef.current !== undefined ? { thinkingSeconds: thinkingRef.current } : {}),
+        };
+        // API と同じ規則で確かめてから往復に加える。弾かれる往復が入ると、
+        // 以後の質問・総評・保存がすべて 400 になり面接をやり直せなくなるため（#70）
+        const checked = turnSchema.safeParse(turn);
+        if (!checked.success) {
+            setAnswerError(issueMessage(checked.error.issues[0]));
+            // 録音の文字起こしは編集できないので、捨てて録り直せるようにする
+            if (!fallbackText) dispatch({ type: "transcribeFailed" });
+            return;
+        }
+        setAnswerError("");
+        dispatch({ type: "submit", turn: { ...turn, answer: checked.data.answer } });
+    }, [transcript, question, answerSeconds, fallbackText]);
 
     // 面接の記録を保存する（失敗したら「再保存」で同じ内容をもう一度送る）
     const save = useCallback(async (turnsNow: Turn[], summaryText: string) => {
@@ -420,8 +432,10 @@ export default function InterviewClient({ conditions }: { conditions: Conditions
                                         </p>
                                         <textarea
                                             value={transcript}
+                                            maxLength={ANSWER_MAX}
                                             onChange={(e) => {
                                                 if (!startedAtRef.current) startedAtRef.current = Date.now();
+                                                setAnswerError("");
                                                 dispatch({ type: "transcript", text: e.target.value, seconds: 0 });
                                             }}
                                             rows={5}
@@ -476,6 +490,7 @@ export default function InterviewClient({ conditions }: { conditions: Conditions
                                                 回答が空です。もう一度話してください。
                                             </p>
                                         )}
+                                        {answerError && <p role="alert" className="text-sm text-red-500">{answerError}</p>}
                                     </div>
                                 )}
                             </div>

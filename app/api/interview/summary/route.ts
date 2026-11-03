@@ -6,21 +6,19 @@ import { getProfile } from "@/lib/profile-db";
 import { buildSummarySystemPrompt, buildSummaryPrompt } from "@/lib/prompts";
 import { validateTurns } from "@/lib/interview";
 import { chat } from "@/lib/groq";
+import { parseJsonBody } from "@/lib/http";
+import { FEEDBACK_MAX, finalizeText, summaryRequestSchema } from "@/lib/schemas";
 
 export async function POST(request: Request) {
     const userId = await requireUserId();
     if (!userId) return unauthorized();
 
-    let body;
-    try {
-        body = await request.json();
-    } catch {
-        return Response.json({ error: "リクエストの形式が不正です" }, { status: 400 });
-    }
+    const parsed = await parseJsonBody(request, summaryRequestSchema);
+    if (!parsed.ok) return parsed.response;
 
-    const conditions = parseConditions(body.conditions ?? {});
+    const conditions = parseConditions(parsed.value.conditions);
     // 総評には笑顔スコアと回答秒数も必要（中断時は 1〜2 往復でもよい）
-    const turns = validateTurns(body.turns, { requireMetrics: true });
+    const turns = validateTurns(parsed.value.turns, { requireMetrics: true });
     if (!turns.ok) return Response.json({ error: turns.error }, { status: 400 });
     if (turns.value.length === 0) {
         return Response.json({ error: "回答がありません" }, { status: 400 });
@@ -33,7 +31,8 @@ export async function POST(request: Request) {
     ]);
     if (!result.ok) return Response.json({ error: result.error }, { status: 502 });
 
-    const summary = result.content.trim();
+    // 保存・読み上げで受け付ける形（整形・上限）にそろえておく
+    const summary = finalizeText(result.content, FEEDBACK_MAX);
     if (!summary) return Response.json({ error: "総評の生成に失敗しました" }, { status: 502 });
     return Response.json({ summary });
 }

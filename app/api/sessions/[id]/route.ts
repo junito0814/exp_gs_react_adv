@@ -3,11 +3,7 @@ import { db } from "@/db";
 import { sessions } from "@/db/schema";
 import { and, eq } from "drizzle-orm";
 import { requireUserId, unauthorized } from "@/lib/auth";
-
-// URL の id を整数に。数値でなければ null
-function parseId(id: string): number | null {
-    return /^\d+$/.test(id) ? Number(id) : null;
-}
+import { parseId } from "@/lib/schemas";
 
 // 1件だけ取得（本人のもののみ。他人・不在は 404）
 export async function GET(

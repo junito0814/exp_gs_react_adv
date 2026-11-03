@@ -9,6 +9,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Pending from "@/app/Pending";
 import { WAITING } from "@/lib/messages";
+import { AUDIO_MAX_BYTES } from "@/lib/schemas";
+
+// 1 回の録音の上限。超えたら自動で止めて文字起こしに進む。
+// 64kbps を指定しているが、ブラウザによっては無視される（128kbps でも 4 分なら AUDIO_MAX_BYTES に収まる）
+const MAX_RECORD_MS = 4 * 60 * 1000;
 
 type Props = {
     onText: (t: string, info?: { speechStart?: number }) => void; // 文字起こし結果と、声が出るまでの秒数
@@ -51,11 +56,19 @@ export default function Recorder({
                 return;
             }
         }
-        const recorder = new MediaRecorder(mic);
+        // 64kbps で録る（声には十分）
+        const recorder = new MediaRecorder(mic, { audioBitsPerSecond: 64_000 });
         chunksRef.current = [];
         recorder.ondataavailable = (e) => chunksRef.current.push(e.data);
         recorder.onstop = async () => {
-            const blob = new Blob(chunksRef.current, { type: "audio/webm" });
+            // 実際に録った形式を付ける（Safari は mp4 で録る。サーバーはこの形式で拡張子を決める）
+            const blob = new Blob(chunksRef.current, { type: recorder.mimeType || "audio/webm" });
+            // 自動停止があるので通常は起きない。サーバーで 413 になる前に止める
+            if (blob.size > AUDIO_MAX_BYTES) {
+                alert("録音が長すぎます。短く区切って録音してください。");
+                onError?.();
+                return;
+            }
             const form = new FormData();
             form.append("audio", blob, "audio.webm");
             setTranscribing(true);
@@ -93,14 +106,25 @@ export default function Recorder({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    function stopRec() {
-        recorderRef.current?.stop();
+    const stopRec = useCallback(() => {
+        if (recorderRef.current?.state !== "recording") return;
+        recorderRef.current.stop();
         // 自分で取得したマイクだけ離す（親から渡されたものは面接が終わるまで使う）
         ownStreamRef.current?.getTracks().forEach((t) => t.stop());
         ownStreamRef.current = null;
         setRecording(false);
         onStop?.();
-    }
+    }, [onStop]);
+
+    // 録音が長くなりすぎたら自動で止める（ファイルがサーバーの上限を超えないように。#70）
+    useEffect(() => {
+        if (!recording) return;
+        const t = setTimeout(() => {
+            stopRec();
+            alert("録音が 4 分を超えたため、自動で止めました。ここまでの内容を文字にします。");
+        }, MAX_RECORD_MS);
+        return () => clearTimeout(t);
+    }, [recording, stopRec]);
 
     // 自動開始のときは開始ボタンを出さない（押すのは「話し終わり」だけ）。
     // 文字起こし中は親が「文字にしています…」を出すので、ここでは何も出さない

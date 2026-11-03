@@ -211,10 +211,10 @@
 
 | ID | エンドポイント | 要件 | 段階 | 状態 |
 | --- | --- | --- | --- | --- |
-| FR-X01 | `POST /api/coach` | 入力 `{topic, answer, conditions}`。サーバーでプロフィールを読み、プロンプトに条件・プロフィール・`level` を反映して `{feedback}` を返す。不正 JSON は 400、Groq 失敗は 502 | 1（プロフィールは 2） | 変更 |
+| FR-X01 | `POST /api/coach` | 入力 `{topic, answer, conditions}`。サーバーでプロフィールを読み、プロンプトに条件・プロフィール・`level` を反映して `{feedback}` を返す。失敗時は `{error}`（入力の誤りは FR-X12、Groq 失敗は 502） | 1（プロフィールは 2） | 変更 |
 | FR-X02 | `POST /api/interview` | 入力 `{conditions, turns: [{question, answer}]}`。`turns` が空なら最初の質問、そうでなければ最後の回答を踏まえた深掘り質問を `{question}` で返す。プロンプトは 5 章 | 2 | 新規 |
 | FR-X03 | `POST /api/interview/summary` | 入力 `{conditions, turns: [{question, answer, smileScore, answerSeconds}]}`。総評を `{summary}` で返す | 2 | 新規 |
-| FR-X04 | `POST /api/transcribe` | Whisper を `response_format=verbose_json` で呼び、`{text, speechStart}` を返す。`speechStart` は最初の segment の開始秒（録音開始から声が出るまで）。取れなければ省略。失敗時は 502 と `{error}` | 1（`speechStart` は #52） | 変更 |
+| FR-X04 | `POST /api/transcribe` | Whisper を `response_format=verbose_json` で呼び、`{text, speechStart}` を返す。`speechStart` は最初の segment の開始秒（録音開始から声が出るまで）。取れなければ省略。音声は 4MB まで・`audio/webm` `ogg` `mp4` `mpeg` `wav` のみ（超えれば 413、形式違いは 415）。`text` は 4000 文字に切り詰める。失敗時は 502 と `{error}` | 1（`speechStart` は #52、上限は #70） | 変更 |
 | FR-X05 | `POST /api/tts` | `{text, level?}` を受け取り、`level` に応じた声・速さ・ピッチで合成する。`level` はサーバー側で検証し、許可した声だけを使う（クライアントから任意の声名は受け取らない）。失敗時は 502 と `{error}` | 1（`level` は #45） | 変更 |
 | FR-X06 | `GET /api/sessions?mode=` | ログインユーザーのセッションを新しい順で返す。`mode` で絞り込み | 1 | 変更 |
 | FR-X07 | `POST /api/sessions` | `mode`・面接条件・（講評）テーマ／回答／講評／メモ・（模擬面接）往復／総評 を保存 | 1（模擬面接は 2） | 変更 |
@@ -222,6 +222,8 @@
 | FR-X09 | `DELETE /api/sessions/[id]` | 本人のものだけ削除。他人・不在は 404 | 1 | 変更 |
 | FR-X10 | `GET /api/profile` `PUT /api/profile` | 本人のプロフィールの取得・保存 `{es, history: [{year, month, text}], qualifications}`。`history` は最大 30 件、各 `text` 100 文字、`year` 1950〜今年、`month` 1〜12 を検証 | 2 | 新規 |
 | FR-X11 | 全 API | 未認証は 401。`userId` は Clerk の `auth()` から取得し、リクエスト body の値は信用しない | 1 | 新規 |
+| FR-X12 | JSON を受け取る全 API | 画面と同じスキーマ（`lib/schemas.ts`）で検証し、失敗時は `{error}`。`Content-Type: application/json` 以外は 415、本文 128KB 超は 413、未知の項目・型違い・上限超え・空の必須項目は 400。文字列は見えない文字を除いてから検証する。AI の出力（質問・講評・総評）は同じ上限に切り詰めて返す | 改善 | 新規（#70） |
+| FR-X13 | 全 API（書き込み） | 別オリジンからの POST・PUT・DELETE は 403（`Sec-Fetch-Site`、無ければ Origin と Host を比べる） | 改善 | 新規（#70） |
 
 ## 5. AI プロンプト要件
 
