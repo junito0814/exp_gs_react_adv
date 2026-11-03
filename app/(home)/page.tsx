@@ -33,7 +33,7 @@ export default async function Home() {
 
     return (
         <main className="flex-1 text-center leading-loose p-10">
-            <h1 className="font-serif text-4xl p-3 mb-6">AI 面接コーチ</h1>
+            <h1 className="font-serif text-4xl p-3 mb-6">AI面接練習コーチ</h1>
             <p className="text-gray-600 dark:text-gray-300 mb-8">
                 志望先と面接官のレベルを選んで、面接練習を始めましょう。
             </p>
