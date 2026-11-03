@@ -20,10 +20,16 @@ GitHub Actions 側はチェック（型・lint・ビルド）だけを担当し�
 | `DATABASE_URL` | Neon のプロジェクト → Connection string | Production / Preview / Development |
 | `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | [dashboard.clerk.com](https://dashboard.clerk.com) → API Keys | Production / Preview / Development |
 | `CLERK_SECRET_KEY` | 同上 | Production / Preview / Development |
+| `NEXT_PUBLIC_CLERK_SIGN_IN_URL` | `/sign-in`（固定値） | Production / Preview / Development |
+| `NEXT_PUBLIC_CLERK_SIGN_UP_URL` | `/sign-up`（固定値） | Production / Preview / Development |
+| `NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL` | `/`（固定値） | Production / Preview / Development |
+| `NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL` | `/`（固定値） | Production / Preview / Development |
 
 - **3 つの環境すべてにチェックを入れる。** Preview に入れ忘れると PR のプレビューだけ失敗する。
 - 値の前後に空白や引用符が混ざらないよう注意（空文字は未設定と同じ扱いになる）。
 - `NEXT_PUBLIC_` が付く変数はブラウザにも配られる公開情報。それ以外（`CLERK_SECRET_KEY` など）は絶対にクライアントへ渡さない。
+- **`NEXT_PUBLIC_CLERK_SIGN_IN_URL` などの 4 つを入れ忘れると、ログイン画面がアプリの `/sign-in` ではなく Clerk のドメイン（`…accounts.dev`）になる。** 値は `.env.example` と同じ。2026-11-03 に本番で入れ忘れが見つかり、追加した
+- `NEXT_PUBLIC_` が付く変数はビルド時に埋め込まれる。**あとから追加・変更したら Redeploy する**（変数を足すだけでは反映されない）
 
 登録後に **Deploy** を押す。
 
@@ -65,6 +71,7 @@ Neon は 1 つのプロジェクト内でブランチを作れるので、Previe
 | `Missing required environment variables` 系でビルドが落ちる | Vercel に環境変数を入れる前に Deploy した。登録して Redeploy する |
 | PR のプレビューだけ落ちる | 環境変数の対象環境に Preview を入れていない |
 | ログインで Clerk のエラー | Clerk の Domains に Vercel のドメインを追加していない |
+| `/` を開くと `…accounts.dev` のログイン画面に移る | `NEXT_PUBLIC_CLERK_SIGN_IN_URL` などが Vercel に未登録。登録して Redeploy する |
 | 講評が「AI との通信に失敗しました」 | `GROQ_API_KEY` が未設定、または無料枠のレート制限（TPM 8000）。時間を置くか Dev Tier にする |
 | 履歴が空・保存に失敗 | `DATABASE_URL` が未設定、または `npm run db:push` をしていない |
 | カメラ・マイクが起動しない | ブラウザで許可していない。アドレスバーのアイコンから許可する |
